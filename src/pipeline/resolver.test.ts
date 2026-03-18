@@ -13,9 +13,7 @@ describe('buildExecutionPlan', () => {
     });
 
     it('returns single group for single phase with no deps', () => {
-      const result = buildExecutionPlan([
-        { phaseNumber: 1, dependsOn: [] },
-      ]);
+      const result = buildExecutionPlan([{ phaseNumber: 1, dependsOn: [] }]);
       expect(result).toEqual({
         ok: true,
         value: { groups: [[1]], phaseOrder: [1] },
@@ -132,9 +130,7 @@ describe('buildExecutionPlan', () => {
     });
 
     it('detects self-referencing dependency', () => {
-      const result = buildExecutionPlan([
-        { phaseNumber: 1, dependsOn: [1] },
-      ]);
+      const result = buildExecutionPlan([{ phaseNumber: 1, dependsOn: [1] }]);
       expect(result).toEqual({
         ok: false,
         error: {
@@ -184,9 +180,7 @@ describe('buildExecutionPlan', () => {
     });
 
     it('handles single phase with empty dependsOn array', () => {
-      const result = buildExecutionPlan([
-        { phaseNumber: 1, dependsOn: [] },
-      ]);
+      const result = buildExecutionPlan([{ phaseNumber: 1, dependsOn: [] }]);
       expect(result).toEqual({
         ok: true,
         value: { groups: [[1]], phaseOrder: [1] },
