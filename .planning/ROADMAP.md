@@ -47,11 +47,12 @@ Plans:
   2. Per-phase sub-state machine tracks step transitions (idle -> discussing -> planning -> executing -> verifying -> done/failed) with validated transitions
   3. FSM state serializes to and deserializes from Paperclip plugin DB format without data loss
   4. Dependency resolver reads roadmap phase dependencies and produces correct parallel execution groups (phases with no unmet dependencies can run together)
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — Pipeline/phase state types and both FSM transition functions
+- [ ] 02-02-PLAN.md — DAG dependency resolver (Kahn's algorithm with parallel group extraction)
+- [ ] 02-03-PLAN.md — Zod serialization schemas, round-trip persistence, and barrel export
 
 ### Phase 3: Agent Spawning Infrastructure
 **Goal**: The plugin can create correctly configured Paperclip agent issues for all five roles (CEO, discusser, planner, executor, verifier) with proper context, isolation, and autonomous GSD command execution
@@ -125,8 +126,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation and Protocol | 1/4 | Complete    | 2026-03-18 |
-| 2. Pipeline State Machine | 0/0 | Not started | - |
+| 1. Foundation and Protocol | 4/4 | Complete    | 2026-03-18 |
+| 2. Pipeline State Machine | 0/3 | Not started | - |
 | 3. Agent Spawning Infrastructure | 0/0 | Not started | - |
 | 4. Sequential Pipeline Execution | 0/0 | Not started | - |
 | 5. Parallel Execution and Merge Strategy | 0/0 | Not started | - |
