@@ -11,6 +11,26 @@ vi.mock('../shared/logger.js', () => ({
   }),
 }));
 
+/**
+ * Create a mock PipelineRunner with all methods used by RPC handler + action handlers.
+ */
+function createMockRunner() {
+  return {
+    handleAgentCompletion: vi.fn().mockResolvedValue(undefined),
+    recordActivity: vi.fn(),
+    getState: vi.fn().mockReturnValue({ status: 'running', phases: [] }),
+    start: vi.fn().mockResolvedValue(undefined),
+    pause: vi.fn().mockResolvedValue(undefined),
+    resume: vi.fn().mockResolvedValue(undefined),
+    retryPhase: vi.fn().mockResolvedValue(undefined),
+    resolveEscalation: vi.fn().mockResolvedValue(undefined),
+    setNotificationService: vi.fn(),
+    getTokenSummary: vi.fn().mockReturnValue([]),
+    getPendingEscalations: vi.fn().mockReturnValue([]),
+    destroy: vi.fn(),
+  };
+}
+
 describe('rpc-handler', () => {
   const handler = createRpcHandler();
 
@@ -278,6 +298,327 @@ describe('rpc-handler', () => {
     });
   });
 
+  describe('executeAction', () => {
+    it('routes valid action to ACTION_HANDLERS and returns result', async () => {
+      const mock = createMockRunner();
+      const h = createRpcHandler(
+        mock as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'executeAction',
+        params: { action: 'gsd.status', args: {} },
+        id: 40,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 40,
+        result: { success: true, data: { status: 'running', phases: [] } },
+      });
+    });
+
+    it('routes gsd.start with args to ACTION_HANDLERS', async () => {
+      const mock = createMockRunner();
+      const h = createRpcHandler(
+        mock as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'executeAction',
+        params: {
+          action: 'gsd.start',
+          args: { projectPath: '/p', brief: 'build it' },
+        },
+        id: 41,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 41,
+        result: { success: true },
+      });
+      expect(mock.start).toHaveBeenCalledWith('/p', 'build it');
+    });
+
+    it('returns METHOD_NOT_FOUND for unknown action', async () => {
+      const mock = createMockRunner();
+      const h = createRpcHandler(
+        mock as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'executeAction',
+        params: { action: 'gsd.nonexistent', args: {} },
+        id: 42,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 42,
+        error: { code: -32601, message: expect.stringContaining('Unknown action') },
+      });
+    });
+
+    it('returns INTERNAL_ERROR without orchestrator', async () => {
+      const h = createRpcHandler();
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'executeAction',
+        params: { action: 'gsd.status', args: {} },
+        id: 43,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 43,
+        error: { code: -32603, message: expect.stringContaining('not initialized') },
+      });
+    });
+
+    it('returns INVALID_PARAMS when action field is missing', async () => {
+      const mock = createMockRunner();
+      const h = createRpcHandler(
+        mock as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'executeAction',
+        params: { args: {} },
+        id: 44,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 44,
+        error: { code: -32602, message: expect.stringContaining('Missing action') },
+      });
+    });
+
+    it('returns INTERNAL_ERROR when handler throws', async () => {
+      const mock = createMockRunner();
+      mock.start.mockRejectedValue(new Error('spawn failed'));
+      const h = createRpcHandler(
+        mock as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'executeAction',
+        params: {
+          action: 'gsd.start',
+          args: { projectPath: '/p', brief: 'b' },
+        },
+        id: 45,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 45,
+        error: { code: -32603, message: 'spawn failed' },
+      });
+    });
+  });
+
+  describe('onEvent chat.message', () => {
+    it('routes "status" command to gsd.status handler', async () => {
+      const mock = createMockRunner();
+      const h = createRpcHandler(
+        mock as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: { type: 'chat.message', data: { content: 'status' } },
+        id: 50,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 50,
+        result: { received: true, reply: { success: true } },
+      });
+    });
+
+    it('routes "start Build me an app" to gsd.start handler', async () => {
+      const mock = createMockRunner();
+      const h = createRpcHandler(
+        mock as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: {
+          type: 'chat.message',
+          data: { content: 'start Build me an app' },
+        },
+        id: 51,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 51,
+        result: { received: true, reply: { success: true } },
+      });
+    });
+
+    it('routes "resolve ESC-abc123 option 1" to gsd.override handler', async () => {
+      const mock = createMockRunner();
+      const h = createRpcHandler(
+        mock as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: {
+          type: 'chat.message',
+          data: { content: 'resolve ESC-abc123 option 1' },
+        },
+        id: 52,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 52,
+        result: { received: true, reply: { success: true } },
+      });
+      expect(mock.resolveEscalation).toHaveBeenCalledWith(
+        'ESC-abc123',
+        'option 1',
+      );
+    });
+
+    it('returns help text for unrecognized message', async () => {
+      const mock = createMockRunner();
+      const h = createRpcHandler(
+        mock as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: { type: 'chat.message', data: { content: 'hello' } },
+        id: 53,
+      });
+
+      const result = (response as { result: { reply: { data: { message: string } } } })
+        .result.reply.data.message;
+      expect(result).toContain('Available commands');
+      expect(result).toContain('start');
+      expect(result).toContain('status');
+    });
+
+    it('returns not-initialized message without orchestrator', async () => {
+      const h = createRpcHandler();
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: { type: 'chat.message', data: { content: 'status' } },
+        id: 54,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 54,
+        result: { received: true, reply: expect.stringContaining('not initialized') },
+      });
+    });
+
+    it('returns received:true for empty content', async () => {
+      const mock = createMockRunner();
+      const h = createRpcHandler(
+        mock as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: { type: 'chat.message', data: { content: '' } },
+        id: 55,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 55,
+        result: { received: true },
+      });
+      // Should not have a reply field
+      expect((response as { result: Record<string, unknown> }).result.reply).toBeUndefined();
+    });
+
+    it('routes "pause" command correctly', async () => {
+      const mock = createMockRunner();
+      const h = createRpcHandler(
+        mock as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: { type: 'chat.message', data: { content: 'pause' } },
+        id: 56,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 56,
+        result: { received: true, reply: { success: true } },
+      });
+      expect(mock.pause).toHaveBeenCalled();
+    });
+
+    it('routes "resume" command correctly', async () => {
+      const mock = createMockRunner();
+      const h = createRpcHandler(
+        mock as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: { type: 'chat.message', data: { content: 'resume' } },
+        id: 57,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 57,
+        result: { received: true, reply: { success: true } },
+      });
+      expect(mock.resume).toHaveBeenCalled();
+    });
+
+    it('routes "retry phase 3" command correctly', async () => {
+      const mock = createMockRunner();
+      const h = createRpcHandler(
+        mock as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      const response = await h({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: { type: 'chat.message', data: { content: 'retry phase 3' } },
+        id: 58,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 58,
+        result: { received: true, reply: { success: true } },
+      });
+      expect(mock.retryPhase).toHaveBeenCalledWith(3, undefined);
+    });
+  });
+
   describe('stub methods', () => {
     it('getState returns not_implemented', async () => {
       const response = await handler({
@@ -290,20 +631,6 @@ describe('rpc-handler', () => {
         jsonrpc: '2.0',
         result: { status: 'not_implemented' },
         id: 4,
-      });
-    });
-
-    it('executeAction returns not_implemented', async () => {
-      const response = await handler({
-        jsonrpc: '2.0',
-        method: 'executeAction',
-        id: 5,
-      });
-
-      expect(response).toEqual({
-        jsonrpc: '2.0',
-        result: { status: 'not_implemented' },
-        id: 5,
       });
     });
 
