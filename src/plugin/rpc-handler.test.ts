@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createRpcHandler } from './rpc-handler.js';
+import { createRpcHandler, manifest } from './rpc-handler.js';
 
 // Suppress logger output in tests
 vi.mock('../shared/logger.js', () => ({
@@ -35,7 +35,7 @@ describe('rpc-handler', () => {
   const handler = createRpcHandler();
 
   describe('initialize', () => {
-    it('returns manifest with correct fields', async () => {
+    it('returns ok:true with supportedMethods', async () => {
       const response = await handler({
         jsonrpc: '2.0',
         method: 'initialize',
@@ -46,11 +46,14 @@ describe('rpc-handler', () => {
         jsonrpc: '2.0',
         id: 1,
         result: {
-          id: '@open-gsd/clip',
-          apiVersion: 1,
-          version: expect.any(String),
-          displayName: expect.any(String),
-          capabilities: expect.any(Array),
+          ok: true,
+          supportedMethods: expect.arrayContaining([
+            'initialize',
+            'health',
+            'shutdown',
+            'onEvent',
+            'executeAction',
+          ]),
         },
       });
     });
@@ -737,6 +740,16 @@ describe('rpc-handler', () => {
       });
 
       expect(response).toBeUndefined();
+    });
+  });
+
+  describe('manifest re-export', () => {
+    it('exports manifest with correct id', () => {
+      expect(manifest.id).toBe('@open-gsd/clip');
+    });
+
+    it('exports manifest with worker entrypoint', () => {
+      expect(manifest.entrypoints.worker).toContain('worker.js');
     });
   });
 });

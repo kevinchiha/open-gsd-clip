@@ -41,7 +41,7 @@ function spawnPlugin() {
 }
 
 describe('plugin integration (child process)', () => {
-  it('responds to initialize with manifest', async () => {
+  it('responds to initialize with ok:true and supportedMethods', async () => {
     const child = spawnPlugin();
     try {
       const response = await sendRequest(child, {
@@ -53,11 +53,8 @@ describe('plugin integration (child process)', () => {
       expect(response.jsonrpc).toBe('2.0');
       expect(response.id).toBe(1);
       expect(response.result).toMatchObject({
-        id: '@open-gsd/clip',
-        apiVersion: 1,
-        version: expect.any(String),
-        displayName: expect.any(String),
-        capabilities: expect.any(Array),
+        ok: true,
+        supportedMethods: expect.any(Array),
       });
     } finally {
       child.stdin?.end();
@@ -113,7 +110,7 @@ describe('plugin integration (child process)', () => {
         method: 'initialize',
         id: 1,
       });
-      expect((r1.result as { id: string }).id).toBe('@open-gsd/clip');
+      expect((r1.result as { ok: boolean }).ok).toBe(true);
 
       const r2 = await sendRequest(child, {
         jsonrpc: '2.0',
