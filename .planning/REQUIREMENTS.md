@@ -36,8 +36,8 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Execution & Reliability
 
 - [ ] **EXEC-01**: Independent phases execute in parallel when roadmap allows
-- [ ] **EXEC-02**: Error handler classifies failures into categories (transient, context overflow, test failure, merge conflict, fatal) and applies appropriate recovery strategy
-- [ ] **EXEC-03**: Retry manager retries failed operations with exponential backoff and jitter
+- [x] **EXEC-02**: Error handler classifies failures into categories (transient, context overflow, test failure, merge conflict, fatal) and applies appropriate recovery strategy
+- [x] **EXEC-03**: Retry manager retries failed operations with exponential backoff and jitter
 - [ ] **EXEC-04**: Stale agent detection identifies hung agents via progress-based health checks (no output for configurable threshold) and respawns them
 - [ ] **EXEC-05**: Phase-level retry allows retrying a specific failed phase from a specific step without restarting the entire pipeline
 
@@ -130,8 +130,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGNT-11 | Phase 6 | Pending |
 | AGNT-12 | Phase 4 | Pending |
 | EXEC-01 | Phase 5 | Pending |
-| EXEC-02 | Phase 4 | Pending |
-| EXEC-03 | Phase 4 | Pending |
+| EXEC-02 | Phase 4 | Complete |
+| EXEC-03 | Phase 4 | Complete |
 | EXEC-04 | Phase 4 | Pending |
 | EXEC-05 | Phase 4 | Pending |
 | CLAW-01 | Phase 6 | Pending |
