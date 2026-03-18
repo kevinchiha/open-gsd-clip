@@ -104,7 +104,7 @@ describe('buildIssueTitle', () => {
         role,
         projectPath: '/path/to/project',
         phaseNumber: 5,
-        gsdCommand: `/gsd:test ${role}`,
+        gsdCommand: `/gsd:${role}-phase 5`,
       };
       const title = buildIssueTitle(ctx);
       expect(title).toContain('5');
