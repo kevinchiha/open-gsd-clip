@@ -47,6 +47,8 @@ function buildMethods(
             'shutdown',
             'onEvent',
             'executeAction',
+            'performAction',
+            'getData',
           ],
         },
         id,
@@ -176,6 +178,31 @@ function buildMethods(
 
       try {
         const result = await handler(args, orchestrator);
+        return success(result, id);
+      } catch (err) {
+        return error(RPC_ERRORS.INTERNAL_ERROR, (err as Error).message, id);
+      }
+    },
+
+    async performAction(params, id) {
+      const { key, params: actionParams } = (params as { key: string; params?: Record<string, unknown>; renderEnvironment?: unknown } | { key?: undefined; params?: undefined }) ?? {};
+
+      if (!key) {
+        return error(RPC_ERRORS.INVALID_PARAMS, 'Missing key field', id);
+      }
+
+      if (!orchestrator) {
+        return error(RPC_ERRORS.INTERNAL_ERROR, 'Pipeline runner not initialized', id);
+      }
+
+      // Map bridge key to action handler (key IS the action name, e.g. "gsd.start")
+      const handler = ACTION_HANDLERS[key];
+      if (!handler) {
+        return error(RPC_ERRORS.METHOD_NOT_FOUND, `Unknown action: ${key}`, id);
+      }
+
+      try {
+        const result = await handler(actionParams, orchestrator);
         return success(result, id);
       } catch (err) {
         return error(RPC_ERRORS.INTERNAL_ERROR, (err as Error).message, id);
