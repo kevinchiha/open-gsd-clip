@@ -8,4 +8,4 @@
  */
 import { startPlugin } from './index.js';
 
-startPlugin();
+void startPlugin();

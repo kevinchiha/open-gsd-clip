@@ -239,30 +239,49 @@ export async function ensureAgentsExist(
 
 /**
  * List existing GSD agents from Paperclip.
+ *
+ * Tries host services first, falls back to direct HTTP API
+ * when the plugin runtime doesn't expose agents.list.
  */
 async function listGsdAgents(
   services: HostServices,
   companyId: string,
 ): Promise<AgentDefinition[]> {
-  if (!services.agents.list) {
-    log.debug('agents.list not available, returning empty list');
-    return [];
+  // Try host services first
+  if (services.agents.list) {
+    const result = await services.agents.list({ name: 'gsd', companyId });
+    if (result.ok) {
+      return (result.value || []).filter((agent: AgentDefinition) =>
+        agent.name?.toLowerCase().startsWith('gsd '),
+      ) as AgentDefinition[];
+    }
+    log.warn({ error: result.error }, 'agents.list failed, trying HTTP fallback');
   }
 
-  const result = await services.agents.list({ name: 'gsd', companyId });
+  // Fallback: query Paperclip REST API directly
+  const port = process.env.PAPERCLIP_PORT || '3100';
+  const url = `http://127.0.0.1:${port}/api/companies/${companyId}/agents`;
+  log.debug({ url }, 'Fetching agents via HTTP fallback');
 
-  if (!result.ok) {
-    log.warn(
-      { error: result.error },
-      'Failed to list agents, returning empty list',
-    );
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      log.warn({ status: res.status }, 'HTTP agent list failed');
+      return [];
+    }
+    const raw = (await res.json()) as Array<{ id: string; name: string; role: string; companyId: string }>;
+    return raw
+      .filter((a) => a.name?.toLowerCase().startsWith('gsd '))
+      .map((a) => ({
+        agentId: a.id,
+        name: a.name,
+        role: a.name.toLowerCase().replace('gsd ', '') as AgentRole,
+        companyId: a.companyId,
+      }));
+  } catch (err) {
+    log.warn({ error: (err as Error).message }, 'HTTP agent list fetch failed');
     return [];
   }
-
-  // Filter to only GSD agents (name starts with "GSD ")
-  return (result.value || []).filter((agent: AgentDefinition) =>
-    agent.name?.toLowerCase().startsWith('gsd '),
-  ) as AgentDefinition[];
 }
 
 /**

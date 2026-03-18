@@ -57,7 +57,7 @@ export async function spawnAgent(
     priority: 'high',
     assigneeAgentId: agentId,
     executionWorkspaceSettings: {
-      mode: 'isolated',
+      mode: 'isolated_workspace',
     },
   });
 

@@ -66,7 +66,7 @@ export class PipelineRunner {
   private state: PipelineState | null = null;
   private readonly services: HostServices;
   private readonly config: OrchestratorConfig;
-  private readonly companyId: string;
+  private companyId: string;
   private auditLog: AuditLog;
   private readonly healthMonitor: HealthMonitor;
   private readonly eventQueue: SerialEventQueue;
@@ -116,6 +116,28 @@ export class PipelineRunner {
    * Start the pipeline: create initial state, ensure agents, spawn CEO.
    */
   async start(projectPath: string, brief: string): Promise<void> {
+    // Guard: reject if pipeline is already running
+    if (this.state && this.state.status !== 'idle' && this.state.status !== 'completed' && this.state.status !== 'failed') {
+      throw new Error(`Pipeline already running (status: ${this.state.status})`);
+    }
+
+    // Auto-detect companyId if still empty
+    if (!this.companyId) {
+      const port = process.env.PAPERCLIP_PORT || '3100';
+      try {
+        const res = await fetch(`http://127.0.0.1:${port}/api/companies`);
+        if (res.ok) {
+          const companies = (await res.json()) as Array<{ id: string }>;
+          if (companies.length > 0) {
+            this.companyId = companies[0].id;
+          }
+        }
+      } catch { /* will fail later with better error */ }
+      if (!this.companyId) {
+        throw new Error('No companyId configured and auto-detection failed');
+      }
+    }
+
     // Create initial state
     const initial = createInitialPipelineState(projectPath, brief);
 
@@ -212,6 +234,10 @@ export class PipelineRunner {
    */
   setNotificationService(service: NotificationService): void {
     this.notificationService = service;
+  }
+
+  setCompanyId(companyId: string): void {
+    this.companyId = companyId;
   }
 
   /**
