@@ -113,12 +113,12 @@ Plans:
   3. CEO escalation decisions are delivered to the user via Discord with context and options, and the user can respond to unblock the pipeline
   4. User can query status, retry failed phases, and pause/resume the pipeline via Discord commands
   5. REST API endpoints (start, status, phases, retry, override, pause, resume) provide programmatic pipeline control
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
-- [ ] 06-03: TBD
+- [ ] 06-01-PLAN.md — API schemas, notification service (formatters, preferences, activity posting), and token tracker
+- [ ] 06-02-PLAN.md — API action handlers, Discord chat parser, and PipelineRunner pause/resume/escalation/notification extensions
+- [ ] 06-03-PLAN.md — RPC handler wiring (executeAction + chat.message), plugin startup, and barrel exports
 
 ## Progress
 
@@ -132,4 +132,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 3. Agent Spawning Infrastructure | 0/3 | Planned | - |
 | 4. Sequential Pipeline Execution | 0/4 | Planned | - |
 | 5. Parallel Execution and Merge Strategy | 0/2 | Planned | - |
-| 6. User-Facing Integration | 0/0 | Not started | - |
+| 6. User-Facing Integration | 0/3 | Planned | - |
