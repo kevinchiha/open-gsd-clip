@@ -133,3 +133,14 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 4. Sequential Pipeline Execution | 0/4 | Planned | - |
 | 5. Parallel Execution and Merge Strategy | 0/2 | Planned | - |
 | 6. User-Facing Integration | 0/3 | Planned | - |
+
+### Phase 06.1: Paperclip plugin packaging and integration readiness (INSERTED)
+
+**Goal:** Plugin produces a correct dist/ output with standalone manifest module, worker entry point, and package.json fields that Paperclip's plugin-loader can discover, validate, and fork
+**Requirements**: PKG-01, PKG-02, PKG-03, PKG-04, PKG-05, PKG-06, PKG-07
+**Depends on:** Phase 6
+**Plans:** 2 plans
+
+Plans:
+- [ ] 06.1-01-PLAN.md — Extract manifest to standalone module, create worker entry point, fix initialize RPC response
+- [ ] 06.1-02-PLAN.md — tsup build configuration, package.json plugin fields, build verification
