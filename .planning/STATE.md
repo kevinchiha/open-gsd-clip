@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 06.1-01-PLAN.md
-last_updated: "2026-03-18T19:39:08.327Z"
-last_activity: 2026-03-18 -- Completed 06.1-01 (Manifest extraction and initialize protocol fix)
+status: completed
+stopped_at: Completed 06.1-02-PLAN.md
+last_updated: "2026-03-18T19:44:21.420Z"
+last_activity: 2026-03-18 -- Completed 06.1-02 (Build configuration and package.json plugin fields)
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 21
-  completed_plans: 20
-  percent: 95
+  completed_plans: 21
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 6.1 of 6.1 (Paperclip Plugin Packaging and Integration Readiness)
-Plan: 1 of 2 in current phase (06.1-01 complete)
-Status: In progress
-Last activity: 2026-03-18 -- Completed 06.1-01 (Manifest extraction and initialize protocol fix)
+Plan: 2 of 2 in current phase (06.1-02 complete)
+Status: Phase complete
+Last activity: 2026-03-18 -- Completed 06.1-02 (Build configuration and package.json plugin fields)
 
-Progress: [██████████] 95%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [██████████] 95%
 | Phase 06 P01 | 5min | 2 tasks | 12 files |
 | Phase 06 P03 | 6min | 2 tasks | 7 files |
 | Phase 06.1 P01 | 3min | 2 tasks | 5 files |
+| Phase 06.1 P02 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,10 @@ Recent decisions affecting current work:
 - [Phase 06.1]: Manifest exports both default and named to satisfy Paperclip's mod.default ?? mod pattern
 - [Phase 06.1]: Worker.ts calls startPlugin() unconditionally -- no isMainModule guard since only loaded via fork()
 - [Phase 06.1]: Initialize returns { ok: true, supportedMethods } instead of manifest to match Paperclip plugin-worker-manager protocol
+- [Phase 06.1]: Multi-entry tsup config with map syntax to control output paths (plugin/worker -> dist/plugin/worker.js)
+- [Phase 06.1]: ESM-only format since package is type:module -- no CJS output needed
+- [Phase 06.1]: All runtime deps externalized in tsup to prevent bundling -- npm handles dependency resolution
+- [Phase 06.1]: prepublishOnly + prepare scripts ensure dist/ always present for npm publish and npm link
 
 ### Roadmap Evolution
 
@@ -156,7 +161,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T19:39:08.325Z
-Stopped at: Completed 06.1-01-PLAN.md
+Last session: 2026-03-18T19:44:21.418Z
+Stopped at: Completed 06.1-02-PLAN.md
 Resume file: None
-Next action: All 19 plans across 6 phases complete. Project milestone v1.0 reached.
+Next action: All 21 plans across 7 phases complete. Project milestone v1.0 reached.
