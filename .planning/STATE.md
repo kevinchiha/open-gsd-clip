@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-03-18T11:13:36.137Z"
-last_activity: 2026-03-18 -- Completed 02-03 serialization schemas and barrel export
+status: planning
+stopped_at: Planned 03-01, 03-02, 03-03
+last_updated: "2026-03-18T12:00:00.000Z"
+last_activity: 2026-03-18 -- Planned Phase 3 Agent Spawning Infrastructure (3 plans)
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 7
+  total_plans: 10
   completed_plans: 7
-  percent: 80
+  percent: 70
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Send a project brief via Discord, come back later to a fully built and verified codebase
-**Current focus:** Phase 2: Pipeline State Machine
+**Current focus:** Phase 3: Agent Spawning Infrastructure
 
 ## Current Position
 
-Phase: 2 of 6 (Pipeline State Machine) -- COMPLETE
-Plan: 3 of 3 in current phase
-Status: Executing
-Last activity: 2026-03-18 -- Completed 02-03 serialization schemas and barrel export
+Phase: 3 of 6 (Agent Spawning Infrastructure) -- PLANNED
+Plan: 0 of 3 in current phase
+Status: Planning
+Last activity: 2026-03-18 -- Planned Phase 3 (3 plans: factory, context, invoker)
 
-Progress: [████████░░] 80%
+Progress: [███████░░░] 70%
 
 ## Performance Metrics
 
@@ -86,6 +86,12 @@ Recent decisions affecting current work:
 - [Phase 02]: Pure transition functions (no side effects) for pipeline and phase FSMs -- consumers react to returned state
 - [Phase 02]: Switch-based pipeline FSM for heterogeneous events; data-driven transition table for uniform phase events
 - [Phase 02]: BFS cascade with visited set prevents infinite loops and processes each node exactly once
+- [Phase 03]: HostServices received via initialize RPC, passed as explicit parameter (dependency injection)
+- [Phase 03]: Agent create-or-lookup pattern -- check for existing gsd-{role} agents before creating
+- [Phase 03]: Instruction files written to ~/.open-gsd-clip/agents/ (stable path, survives temp purges)
+- [Phase 03]: Context injection via issue descriptions (dynamic per-run), not instructionsFilePath (static)
+- [Phase 03]: Agent completion detected via heartbeat.run.status events (event-driven, no polling)
+- [Phase 03]: executionWorkspaceSettings.mode: 'isolated' for all GSD agents (prevents parallel collisions)
 
 ### Pending Todos
 
@@ -99,6 +105,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T11:10:46.000Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-03-18T12:00:00.000Z
+Stopped at: Planned 03-01, 03-02, 03-03
 Resume file: None
+Next action: Execute Phase 3 Plan 01 (agent types and factory)

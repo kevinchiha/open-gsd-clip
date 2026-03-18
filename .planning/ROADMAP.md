@@ -64,12 +64,12 @@ Plans:
   3. CEO agent can run /gsd:new-project --auto against a real project brief and produce a valid roadmap without hanging on interactive prompts
   4. Each specialist agent (discusser, planner, executor, verifier) can run its respective /gsd command autonomously against a real phase
   5. Agent spawning applies 4-layer isolation to prevent 50K token overhead per Claude Code subprocess
-**Plans**: TBD
+**Plans:** 0/3 plans complete
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01-PLAN.md — Agent types, HostServices interface, factory with create-or-lookup, role instruction files
+- [ ] 03-02-PLAN.md — Context builder (issue title/description, GSD command injection, signal templates)
+- [ ] 03-03-PLAN.md — Agent invoker (issue creation, agent wake), signal-to-event mapping, onEvent handler update
 
 ### Phase 4: Sequential Pipeline Execution
 **Goal**: A complete end-to-end pipeline runs all phases sequentially (discuss -> CEO review -> plan -> execute -> verify per phase) with quality gates, error recovery, stale agent detection, and full decision audit logging
@@ -81,12 +81,13 @@ Plans:
   3. Failed operations are classified by type (transient, context overflow, test failure, merge conflict, fatal) and retried with exponential backoff where appropriate
   4. Stale agents are detected via progress-based health checks (no output for configurable threshold) and respawned with hard per-step timeouts
   5. Every CEO decision is recorded in an audit log with timestamp, context, options considered, choice made, and reasoning
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
-- [ ] 04-03: TBD
+- [ ] 04-01-PLAN.md — Orchestrator types, error classification, and exponential backoff retry
+- [ ] 04-02-PLAN.md — CEO decision audit log (append-only JSONL) and stale agent health monitor
+- [ ] 04-03-PLAN.md — CEO quality gate (review + revision flow) and serial event queue
+- [ ] 04-04-PLAN.md — PipelineRunner orchestration loop, onEvent wiring, and barrel export
 
 ### Phase 5: Parallel Execution and Merge Strategy
 **Goal**: Independent phases execute concurrently using git worktrees, with completed results merged in roadmap order to avoid conflicts
@@ -127,8 +128,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation and Protocol | 4/4 | Complete    | 2026-03-18 |
-| 2. Pipeline State Machine | 1/3 | Complete    | 2026-03-18 |
-| 3. Agent Spawning Infrastructure | 0/0 | Not started | - |
-| 4. Sequential Pipeline Execution | 0/0 | Not started | - |
+| 2. Pipeline State Machine | 3/3 | Complete    | 2026-03-18 |
+| 3. Agent Spawning Infrastructure | 0/3 | Planned | - |
+| 4. Sequential Pipeline Execution | 0/4 | Planned | - |
 | 5. Parallel Execution and Merge Strategy | 0/0 | Not started | - |
 | 6. User-Facing Integration | 0/0 | Not started | - |
