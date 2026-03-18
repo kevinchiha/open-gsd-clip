@@ -172,8 +172,9 @@ export class PipelineRunner {
       this.config.retry,
     );
 
-    // Track CEO agent health
+    // Track CEO agent health and poll for completion
     this.healthMonitor.trackAgent(spawn.issueId, spawn.runId);
+    this.trackRunForPolling(ceoAgentId, spawn.issueId, spawn.runId);
 
     // Store issue on pipeline state (no phase yet -- CEO is pipeline-level)
     await this.persistState();
@@ -223,9 +224,51 @@ export class PipelineRunner {
   /**
    * Clean up resources (health monitor timers, worktrees).
    */
+  private completionPoller: ReturnType<typeof setInterval> | null = null;
+  /** Map of issueId → { agentId, runId } for active agent runs being polled. */
+  private trackedRuns = new Map<string, { agentId: string; runId: string }>();
+
   destroy(): void {
     this.healthMonitor.destroy();
+    if (this.completionPoller) clearInterval(this.completionPoller);
     void this.worktreeManager?.cleanupAll().catch(() => {});
+  }
+
+  /**
+   * Track an agent run for completion polling.
+   * The background poller checks all tracked issues every 10s.
+   */
+  private trackRunForPolling(agentId: string, issueId: string, runId: string): void {
+    this.trackedRuns.set(issueId, { agentId, runId });
+
+    // Start the background poller if not already running
+    if (!this.completionPoller) {
+      const port = process.env.PAPERCLIP_PORT || '3100';
+      this.completionPoller = setInterval(async () => {
+        if (this.trackedRuns.size === 0) return;
+
+        for (const [issueId, { agentId, runId }] of this.trackedRuns) {
+          try {
+            const res = await fetch(`http://127.0.0.1:${port}/api/agents/${agentId}`);
+            if (!res.ok) continue;
+            const agent = (await res.json()) as { status: string };
+
+            if (agent.status === 'idle') {
+              log.info({ agentId, runId, issueId }, 'Agent completed (detected via polling)');
+              this.trackedRuns.delete(issueId);
+              void this.handleAgentCompletion({
+                status: 'succeeded',
+                agentId,
+                runId,
+                issueId,
+              });
+            }
+          } catch {
+            // Network error — keep polling
+          }
+        }
+      }, 10_000);
+    }
   }
 
   /**
@@ -1175,6 +1218,7 @@ export class PipelineRunner {
     phaseNumber: number,
     issueId: string,
     runId: string,
+    agentId?: string,
   ): Promise<void> {
     if (!this.state) return;
 
@@ -1190,6 +1234,9 @@ export class PipelineRunner {
     }
 
     this.healthMonitor.trackAgent(issueId, runId);
+    if (agentId) {
+      this.trackRunForPolling(agentId, issueId, runId);
+    }
     await this.persistState();
   }
 
