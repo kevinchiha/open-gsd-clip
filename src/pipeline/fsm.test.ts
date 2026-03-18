@@ -165,10 +165,7 @@ describe('pipelineTransition - valid transitions', () => {
       ...createInitialPipelineState('/p', 'b'),
       status: 'running',
       startedAt: '2026-01-01T00:00:00.000Z',
-      phases: [
-        makePhaseState(1, { status: 'executing' }),
-        makePhaseState(2),
-      ],
+      phases: [makePhaseState(1, { status: 'executing' }), makePhaseState(2)],
     };
     const result = pipelineTransition(state, {
       type: 'PHASE_FAILED',
@@ -184,8 +181,6 @@ describe('pipelineTransition - valid transitions', () => {
 
   it('updates lastTransitionAt on every valid transition', () => {
     const state = createInitialPipelineState('/p', 'b');
-    const before = state.lastTransitionAt;
-    // Small delay not needed -- just check it's a string
     const result = pipelineTransition(state, { type: 'START_PIPELINE' });
     expect(result.state.lastTransitionAt).toBeTypeOf('string');
     expect(result.state.lastTransitionAt).not.toBeNull();
@@ -242,7 +237,7 @@ describe('pipelineTransition - invalid transitions', () => {
       const result = pipelineTransition(state, event);
       expect(result.valid).toBe(false);
       expect(result.description).toBeTypeOf('string');
-      expect(result.description!.length).toBeGreaterThan(0);
+      expect(result.description?.length).toBeGreaterThan(0);
     });
   }
 });
@@ -383,10 +378,11 @@ describe('cascadeFailure', () => {
     ]);
     const result = cascadeFailure(state, 1, testError, dependents);
     // Phase 2 was already failed -- should remain as-is (no cascade info overwrite)
-    const phase2 = result.phases.find((p) => p.phaseNumber === 2)!;
-    expect(phase2.status).toBe('failed');
+    const phase2 = result.phases.find((p) => p.phaseNumber === 2);
+    expect(phase2).toBeDefined();
+    expect(phase2?.status).toBe('failed');
     // Its cascade info should NOT be overwritten since it was already failed
-    expect(phase2.failureCascade).toBeNull();
+    expect(phase2?.failureCascade).toBeNull();
     // Phase 3 should still be cascaded through phase 2
     expect(result.phases.find((p) => p.phaseNumber === 3)?.status).toBe(
       'failed',
