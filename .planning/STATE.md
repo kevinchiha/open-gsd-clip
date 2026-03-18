@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-02-PLAN.md
-last_updated: "2026-03-18T10:51:53.046Z"
-last_activity: 2026-03-18 -- Completed 01-04 signal parser with 12 Zod-validated signal types
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-03-18T10:58:11.934Z"
+last_activity: 2026-03-18 -- Completed 02-02 DAG dependency resolver with Kahn's algorithm
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 4
-  percent: 50
+  completed_plans: 5
+  percent: 71
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Send a project brief via Discord, come back later to a fully built and verified codebase
-**Current focus:** Phase 1: Foundation and Protocol
+**Current focus:** Phase 2: Pipeline State Machine
 
 ## Current Position
 
-Phase: 1 of 6 (Foundation and Protocol)
-Plan: 4 of 4 in current phase
+Phase: 2 of 6 (Pipeline State Machine)
+Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-03-18 -- Completed 01-04 signal parser with 12 Zod-validated signal types
+Last activity: 2026-03-18 -- Completed 02-02 DAG dependency resolver with Kahn's algorithm
 
-Progress: [█████░░░░░] 50%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [█████░░░░░] 50%
 | Phase 01 P04 | 5min | 2 tasks | 6 files |
 | Phase 01 P03 | 5min | 2 tasks | 9 files |
 | Phase 01 P02 | 8min | 2 tasks | 7 files |
+| Phase 02 P02 | 2min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,9 @@ Recent decisions affecting current work:
 - [Phase 01]: FindPhaseSchema allows nullable directory/phase_number/phase_name for found=false case (verified against real gsd-tools.cjs)
 - [Phase 01]: Hand-rolled JSON-RPC over stdio -- no json-rpc-2.0 library needed for 8-method protocol
 - [Phase 01]: node:child_process.spawn for integration tests -- simpler than execa for test harness
+- [Phase 02]: PhaseInput/ExecutionPlan types defined locally in resolver.ts -- Plan 03 reconciles with types.ts
+- [Phase 02]: Sorted phase numbers within parallel groups for deterministic resolver output
+- [Phase 02]: Missing dependency validation runs before graph construction (fail-fast)
 
 ### Pending Todos
 
@@ -87,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T10:50:39.192Z
-Stopped at: Completed 01-02-PLAN.md
+Last session: 2026-03-18T10:58:11.932Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
