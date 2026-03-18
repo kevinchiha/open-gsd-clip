@@ -2,38 +2,15 @@ import { ACTION_HANDLERS } from '../api/actions.js';
 import { parseCommand } from '../api/chat-parser.js';
 import type { PipelineRunner } from '../orchestrator/pipeline-runner.js';
 import { createChildLogger } from '../shared/logger.js';
+import { manifest } from './manifest.js';
 import {
   type JsonRpcErrorResponse,
   JsonRpcRequestSchema,
   type JsonRpcResponse,
-  type PaperclipPluginManifestV1,
   RPC_ERRORS,
 } from './types.js';
 
 const log = createChildLogger('rpc-handler');
-
-/**
- * Plugin manifest returned by the `initialize` method.
- */
-const manifest: PaperclipPluginManifestV1 = {
-  id: '@open-gsd/clip',
-  apiVersion: 1,
-  version: '0.1.0',
-  displayName: 'GSD Orchestrator',
-  description:
-    'Automates the full GSD development pipeline via agent orchestration',
-  categories: ['automation'],
-  capabilities: [
-    'data.read',
-    'data.write',
-    'plugin.state',
-    'events.subscribe',
-    'agent.tools.register',
-  ],
-  entrypoints: {
-    worker: './dist/plugin/worker.js',
-  },
-};
 
 type MethodHandler = (
   params: unknown,
@@ -61,7 +38,19 @@ function buildMethods(
   return {
     async initialize(_params, id) {
       log.info('Plugin initialized');
-      return success(manifest, id);
+      return success(
+        {
+          ok: true,
+          supportedMethods: [
+            'initialize',
+            'health',
+            'shutdown',
+            'onEvent',
+            'executeAction',
+          ],
+        },
+        id,
+      );
     },
 
     async health(_params, id) {
