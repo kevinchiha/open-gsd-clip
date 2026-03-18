@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import type { PipelineState } from './types.js';
 import type { Result } from '../shared/types.js';
+import type { PipelineState } from './types.js';
 
 // ── Zod schemas mirroring types.ts ───────────────────────────────────
 
@@ -123,8 +123,7 @@ export function deserialize(
   } catch (err) {
     return {
       ok: false,
-      error:
-        err instanceof Error ? err : new Error('Failed to parse JSON'),
+      error: err instanceof Error ? err : new Error('Failed to parse JSON'),
     };
   }
 

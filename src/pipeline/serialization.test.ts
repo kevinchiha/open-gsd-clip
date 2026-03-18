@@ -1,17 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { serialize, deserialize } from './serialization.js';
-import {
-  createInitialPipelineState,
-  pipelineTransition,
-} from './fsm.js';
+import { createInitialPipelineState, pipelineTransition } from './fsm.js';
 import { createInitialPhaseState, phaseTransition } from './phase-machine.js';
+import { deserialize, serialize } from './serialization.js';
 import type {
-  PipelineState,
-  PhaseState,
-  PhaseError,
-  FailureCascadeInfo,
   ExecutionPlan,
+  FailureCascadeInfo,
+  PhaseError,
+  PhaseState,
+  PipelineState,
 } from './types.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -268,14 +265,19 @@ describe('deserialize invalid', () => {
 describe('full integration round-trip', () => {
   it('create initial state -> transitions -> serialize -> deserialize -> more transitions', () => {
     // 1. Create initial pipeline state
-    const initial = createInitialPipelineState('/test/project', 'Integration brief');
+    const initial = createInitialPipelineState(
+      '/test/project',
+      'Integration brief',
+    );
     expect(initial.status).toBe('idle');
 
     // 2. Apply pipeline transitions: idle -> initializing -> analyzing
     const started = pipelineTransition(initial, { type: 'START_PIPELINE' });
     expect(started.valid).toBe(true);
 
-    const ready = pipelineTransition(started.state, { type: 'PROJECT_READY' });
+    const ready = pipelineTransition(started.state, {
+      type: 'PROJECT_READY',
+    });
     expect(ready.valid).toBe(true);
     expect(ready.state.status).toBe('analyzing');
 
@@ -301,16 +303,20 @@ describe('full integration round-trip', () => {
     expect(running.state.status).toBe('running');
 
     // 4. Apply phase transitions to phase 1
-    const p1Step1 = phaseTransition(running.state.phases[0]!, {
+    const runningPhase0 = running.state.phases[0];
+    expect(runningPhase0).toBeDefined();
+    const p1Step1 = phaseTransition(runningPhase0 as PhaseState, {
       type: 'DEPENDENCIES_MET',
     });
     expect(p1Step1.valid).toBe(true);
     expect(p1Step1.state.status).toBe('discussing');
 
     // 5. Snapshot the state for serialization
+    const runningPhase1 = running.state.phases[1];
+    expect(runningPhase1).toBeDefined();
     const preSerializeState: PipelineState = {
       ...running.state,
-      phases: [p1Step1.state, running.state.phases[1]!],
+      phases: [p1Step1.state, runningPhase1 as PhaseState],
     };
 
     // 6. Serialize
@@ -332,7 +338,9 @@ describe('full integration round-trip', () => {
     expect(deserialized.value.brief).toBe('Integration brief');
 
     // 9. Apply more phase transitions on the deserialized state
-    const p1Step2 = phaseTransition(deserialized.value.phases[0]!, {
+    const deserializedPhase0 = deserialized.value.phases[0];
+    expect(deserializedPhase0).toBeDefined();
+    const p1Step2 = phaseTransition(deserializedPhase0 as PhaseState, {
       type: 'STEP_COMPLETED',
     });
     expect(p1Step2.valid).toBe(true);
