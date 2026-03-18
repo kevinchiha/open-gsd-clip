@@ -50,12 +50,8 @@ export interface AgentConfig {
   model: string;
 }
 
-/**
- * Result type for operations that can fail.
- */
-export type Result<T, E = Error> =
-  | { ok: true; value: T }
-  | { ok: false; error: E };
+import type { Result } from '../shared/types.js';
+export type { Result } from '../shared/types.js';
 
 /**
  * Partial HostServices interface for GSD agent operations.

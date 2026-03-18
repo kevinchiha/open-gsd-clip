@@ -17,7 +17,7 @@ import type {
   AgentRole,
   HostServices,
 } from './types.js';
-import { AGENT_ROLES } from './types.js';
+import { AGENT_ROLES, PAPERCLIP_ROLE_MAP } from './types.js';
 
 const log = createChildLogger('agent-factory');
 
@@ -189,6 +189,7 @@ export async function ensureAgentsExist(
   services: HostServices,
   projectPath: string,
   companyId: string,
+  model = 'claude-opus-4-6',
 ): Promise<Record<AgentRole, AgentDefinition>> {
   log.info({ companyId, projectPath }, 'Ensuring GSD agents exist');
 
@@ -227,6 +228,7 @@ export async function ensureAgentsExist(
         role,
         projectPath,
         companyId,
+        model,
       );
       log.info({ role, agentId: agents[role].agentId }, 'Created new agent');
     }
@@ -271,6 +273,7 @@ async function createGsdAgent(
   role: AgentRole,
   projectPath: string,
   companyId: string,
+  model: string,
 ): Promise<AgentDefinition> {
   const name = getAgentName(role);
   const instructionsFilePath = writeInstructionFile(role);
@@ -278,7 +281,7 @@ async function createGsdAgent(
   const adapterConfig: AgentConfig = {
     cwd: projectPath,
     instructionsFilePath,
-    model: 'claude-sonnet-4-20250514',
+    model,
   };
 
   // Check if create is available
@@ -323,12 +326,5 @@ function getAgentName(role: AgentRole): string {
  * Get the Paperclip role for a GSD role.
  */
 function getPaperclipRole(role: AgentRole): string {
-  const map: Record<AgentRole, string> = {
-    ceo: 'ceo',
-    discusser: 'engineer',
-    planner: 'pm',
-    executor: 'engineer',
-    verifier: 'qa',
-  };
-  return map[role];
+  return PAPERCLIP_ROLE_MAP[role];
 }
