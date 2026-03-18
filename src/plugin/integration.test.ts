@@ -12,7 +12,10 @@ function sendRequest(
   request: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Response timeout after 5s')), 5000);
+    const timeout = setTimeout(
+      () => reject(new Error('Response timeout after 5s')),
+      5000,
+    );
 
     const onData = (data: Buffer) => {
       clearTimeout(timeout);
@@ -20,7 +23,7 @@ function sendRequest(
       try {
         const response = JSON.parse(data.toString().trim().split('\n')[0]);
         resolve(response);
-      } catch (err) {
+      } catch {
         reject(new Error(`Failed to parse response: ${data.toString()}`));
       }
     };

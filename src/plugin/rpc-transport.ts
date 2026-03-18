@@ -47,7 +47,10 @@ export function createTransport(input: Readable, output: Writable) {
           output.write(
             `${JSON.stringify({
               jsonrpc: '2.0',
-              error: { code: RPC_ERRORS.INTERNAL_ERROR, message: 'Internal error' },
+              error: {
+                code: RPC_ERRORS.INTERNAL_ERROR,
+                message: 'Internal error',
+              },
               id: null,
             })}\n`,
           );

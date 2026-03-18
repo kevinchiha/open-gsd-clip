@@ -6,7 +6,9 @@ describe('rpc-transport', () => {
   it('calls handler with parsed JSON and writes response', async () => {
     const input = new PassThrough();
     const output = new PassThrough();
-    const handler = vi.fn().mockResolvedValue({ jsonrpc: '2.0', result: 'ok', id: 1 });
+    const handler = vi
+      .fn()
+      .mockResolvedValue({ jsonrpc: '2.0', result: 'ok', id: 1 });
 
     const transport = createTransport(input, output);
     transport.onMessage(handler);
@@ -16,7 +18,11 @@ describe('rpc-transport', () => {
     // Wait for readline to process the line
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(handler).toHaveBeenCalledWith({ jsonrpc: '2.0', method: 'health', id: 1 });
+    expect(handler).toHaveBeenCalledWith({
+      jsonrpc: '2.0',
+      method: 'health',
+      id: 1,
+    });
 
     // Read from output
     const chunk = output.read();
@@ -78,7 +84,11 @@ describe('rpc-transport', () => {
     let callCount = 0;
     const handler = vi.fn().mockImplementation(async (msg: unknown) => {
       callCount++;
-      return { jsonrpc: '2.0', result: `response-${callCount}`, id: (msg as { id: number }).id };
+      return {
+        jsonrpc: '2.0',
+        result: `response-${callCount}`,
+        id: (msg as { id: number }).id,
+      };
     });
 
     const transport = createTransport(input, output);

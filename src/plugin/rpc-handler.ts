@@ -1,8 +1,8 @@
 import { createChildLogger } from '../shared/logger.js';
 import {
   type JsonRpcErrorResponse,
-  type JsonRpcResponse,
   JsonRpcRequestSchema,
+  type JsonRpcResponse,
   type PaperclipPluginManifestV1,
   RPC_ERRORS,
 } from './types.js';
@@ -17,7 +17,8 @@ const manifest: PaperclipPluginManifestV1 = {
   apiVersion: 1,
   version: '0.1.0',
   displayName: 'GSD Orchestrator',
-  description: 'Automates the full GSD development pipeline via agent orchestration',
+  description:
+    'Automates the full GSD development pipeline via agent orchestration',
   categories: ['automation'],
   capabilities: [
     'data.read',
@@ -40,7 +41,11 @@ function success(result: unknown, id: string | number | null): JsonRpcResponse {
   return { jsonrpc: '2.0', result, id };
 }
 
-function error(code: number, message: string, id: string | number | null): JsonRpcErrorResponse {
+function error(
+  code: number,
+  message: string,
+  id: string | number | null,
+): JsonRpcErrorResponse {
   return { jsonrpc: '2.0', error: { code, message }, id };
 }
 
@@ -93,12 +98,14 @@ const methods: Record<string, MethodHandler> = {
 export function createRpcHandler() {
   return async (request: unknown): Promise<unknown> => {
     // Extract id early for error responses (even from invalid requests)
-    const rawId = (request != null && typeof request === 'object' && 'id' in request)
-      ? (request as { id: unknown }).id
-      : null;
-    const id = (typeof rawId === 'string' || typeof rawId === 'number' || rawId === null)
-      ? rawId
-      : null;
+    const rawId =
+      request != null && typeof request === 'object' && 'id' in request
+        ? (request as { id: unknown }).id
+        : null;
+    const id =
+      typeof rawId === 'string' || typeof rawId === 'number' || rawId === null
+        ? rawId
+        : null;
 
     // Validate against JSON-RPC 2.0 schema
     const parsed = JsonRpcRequestSchema.safeParse(request);

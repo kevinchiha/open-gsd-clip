@@ -36,10 +36,10 @@ export function startPlugin() {
 // Auto-start when run directly
 // In ESM, we detect if this module is the entry point by checking if
 // process.argv[1] resolves to this file (tsx rewrites the path)
-const isMainModule = process.argv[1] && (
-  process.argv[1].endsWith('/plugin/index.ts') ||
-  process.argv[1].endsWith('/plugin/index.js')
-);
+const isMainModule =
+  process.argv[1] &&
+  (process.argv[1].endsWith('/plugin/index.ts') ||
+    process.argv[1].endsWith('/plugin/index.js'));
 
 if (isMainModule) {
   startPlugin();
