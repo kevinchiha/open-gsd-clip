@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-18T18:04:15.475Z"
-last_activity: 2026-03-18 -- Completed 06-01 (Foundation types, schemas, notifications, token tracker)
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-18T18:12:03.000Z"
+last_activity: 2026-03-18 -- Completed 06-02 (Action handlers, chat parser, PipelineRunner extensions)
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 19
-  completed_plans: 17
-  percent: 89
+  completed_plans: 18
+  percent: 95
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 ## Current Position
 
 Phase: 6 of 6 (User-Facing Integration)
-Plan: 1 of 3 in current phase (06-01 complete)
+Plan: 2 of 3 in current phase (06-02 complete)
 Status: Phase 06 in progress
-Last activity: 2026-03-18 -- Completed 06-01 (Foundation types, schemas, notifications, token tracker)
+Last activity: 2026-03-18 -- Completed 06-02 (Action handlers, chat parser, PipelineRunner extensions)
 
-Progress: [█████████░] 89%
+Progress: [█████████░] 95%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [█████████░] 89%
 | Phase 04 P03 | 3min | 2 tasks | 4 files |
 | Phase 05 P02 | 8min | 2 tasks | 3 files |
 | Phase 05 P01 | 6min | 2 tasks | 4 files |
+| Phase 06 P02 | 7min | 2 tasks | 8 files |
 | Phase 06 P01 | 5min | 2 tasks | 12 files |
 
 ## Accumulated Context
@@ -128,6 +129,8 @@ Recent decisions affecting current work:
 - [Phase 06]: Floating point precision fix for costCents via Math.round to 10 decimal places
 - [Phase 06]: Discriminated union with 9 event types for PipelineNotificationEvent (typed switch exhaustiveness)
 - [Phase 06]: Set-based preference filtering for O(1) event type matching
+- [Phase 06]: advancePhaseAfterDecision dispatches STEP_COMPLETED to resume normal phase flow after escalation resolution
+- [Phase 06]: Notification hooks use actual PipelineNotificationEvent field shapes from formatters.ts (phaseName, brief, reason)
 
 ### Pending Todos
 
@@ -141,7 +144,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T18:04:15.473Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-03-18T18:12:03.000Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
-Next action: Phase 5 complete. Begin Phase 6 (UX and Polish) if applicable.
+Next action: Execute 06-03 (RPC handler wiring and final integration).

@@ -30,7 +30,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **AGNT-08**: CEO quality gate reviews CONTEXT.md between discuss and plan, approving or requesting revision
 - [x] **AGNT-09**: CEO agent can request discussion revision when CONTEXT.md has gaps, triggering re-discussion
 - [x] **AGNT-10**: CEO decision audit log records every autonomous decision with timestamp, context, options considered, choice made, and reasoning
-- [ ] **AGNT-11**: CEO escalates big architectural or scope decisions to user via Discord and waits for response (non-blocking for other phases)
+- [x] **AGNT-11**: CEO escalates big architectural or scope decisions to user via Discord and waits for response (non-blocking for other phases)
 - [x] **AGNT-12**: CEO agent can detect when execution reveals plan problems and trigger re-planning for the affected phase
 
 ### Execution & Reliability
@@ -43,23 +43,23 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### OpenClaw Integration
 
-- [ ] **CLAW-01**: User can start a project pipeline by sending a brief via Discord through OpenClaw
+- [x] **CLAW-01**: User can start a project pipeline by sending a brief via Discord through OpenClaw
 - [x] **CLAW-02**: Pipeline pushes status updates to Discord at meaningful transitions (phase started, completed, failed, decision made)
 - [x] **CLAW-03**: CEO escalation decisions are delivered to user via Discord with context and options
-- [ ] **CLAW-04**: User can respond to CEO escalations via Discord to unblock the pipeline
-- [ ] **CLAW-05**: User can query pipeline status via Discord chat
-- [ ] **CLAW-06**: User can retry failed phases via Discord commands
-- [ ] **CLAW-07**: User can pause and resume the pipeline via Discord commands
+- [x] **CLAW-04**: User can respond to CEO escalations via Discord to unblock the pipeline
+- [x] **CLAW-05**: User can query pipeline status via Discord chat
+- [x] **CLAW-06**: User can retry failed phases via Discord commands
+- [x] **CLAW-07**: User can pause and resume the pipeline via Discord commands
 
 ### Plugin API
 
-- [ ] **API-01**: POST /gsd/start endpoint starts a pipeline with brief and project path
-- [ ] **API-02**: GET /gsd/status endpoint returns full pipeline state and phase progress
-- [ ] **API-03**: GET /gsd/phases endpoint returns parsed roadmap phases
-- [ ] **API-04**: POST /gsd/retry/:phase endpoint retries a failed phase from a specific step
-- [ ] **API-05**: POST /gsd/override endpoint allows user to override a CEO decision
-- [ ] **API-06**: POST /gsd/pause endpoint pauses the pipeline (stops spawning new agents, lets running agents complete)
-- [ ] **API-07**: POST /gsd/resume endpoint resumes a paused pipeline from its current state
+- [x] **API-01**: POST /gsd/start endpoint starts a pipeline with brief and project path
+- [x] **API-02**: GET /gsd/status endpoint returns full pipeline state and phase progress
+- [x] **API-03**: GET /gsd/phases endpoint returns parsed roadmap phases
+- [x] **API-04**: POST /gsd/retry/:phase endpoint retries a failed phase from a specific step
+- [x] **API-05**: POST /gsd/override endpoint allows user to override a CEO decision
+- [x] **API-06**: POST /gsd/pause endpoint pauses the pipeline (stops spawning new agents, lets running agents complete)
+- [x] **API-07**: POST /gsd/resume endpoint resumes a paused pipeline from its current state
 
 ### Observability
 
@@ -127,27 +127,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGNT-08 | Phase 4 | Complete |
 | AGNT-09 | Phase 4 | Complete |
 | AGNT-10 | Phase 4 | Complete |
-| AGNT-11 | Phase 6 | Pending |
+| AGNT-11 | Phase 6 | Complete |
 | AGNT-12 | Phase 4 | Complete |
 | EXEC-01 | Phase 5 | Complete |
 | EXEC-02 | Phase 4 | Complete |
 | EXEC-03 | Phase 4 | Complete |
 | EXEC-04 | Phase 4 | Complete |
 | EXEC-05 | Phase 4 | Complete |
-| CLAW-01 | Phase 6 | Pending |
+| CLAW-01 | Phase 6 | Complete |
 | CLAW-02 | Phase 6 | Complete |
 | CLAW-03 | Phase 6 | Complete |
-| CLAW-04 | Phase 6 | Pending |
-| CLAW-05 | Phase 6 | Pending |
-| CLAW-06 | Phase 6 | Pending |
-| CLAW-07 | Phase 6 | Pending |
-| API-01 | Phase 6 | Pending |
-| API-02 | Phase 6 | Pending |
-| API-03 | Phase 6 | Pending |
-| API-04 | Phase 6 | Pending |
-| API-05 | Phase 6 | Pending |
-| API-06 | Phase 6 | Pending |
-| API-07 | Phase 6 | Pending |
+| CLAW-04 | Phase 6 | Complete |
+| CLAW-05 | Phase 6 | Complete |
+| CLAW-06 | Phase 6 | Complete |
+| CLAW-07 | Phase 6 | Complete |
+| API-01 | Phase 6 | Complete |
+| API-02 | Phase 6 | Complete |
+| API-03 | Phase 6 | Complete |
+| API-04 | Phase 6 | Complete |
+| API-05 | Phase 6 | Complete |
+| API-06 | Phase 6 | Complete |
+| API-07 | Phase 6 | Complete |
 | OBSV-01 | Phase 6 | Complete |
 | OBSV-02 | Phase 6 | Complete |
 | OBSV-03 | Phase 6 | Complete |
