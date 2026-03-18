@@ -16,6 +16,8 @@
  * to pending. Re-planning is capped at maxReplans=2.
  */
 
+import { randomUUID } from 'node:crypto';
+
 import { ensureAgentsExist } from '../agents/factory.js';
 import { mapSignalToPhaseEvent, spawnAgent } from '../agents/invoker.js';
 import type {
@@ -23,6 +25,7 @@ import type {
   AgentRole,
   HostServices,
 } from '../agents/types.js';
+import type { NotificationService } from '../notifications/notification-service.js';
 import {
   cascadeFailure,
   createInitialPipelineState,
@@ -42,7 +45,7 @@ import type {
 } from '../pipeline/types.js';
 import { createChildLogger } from '../shared/logger.js';
 import { parseSignal } from '../signals/parser.js';
-import type { GsdSignal } from '../signals/types.js';
+import type { DecisionNeededSignal, GsdSignal } from '../signals/types.js';
 
 import { AuditLog } from './audit-log.js';
 import { classifyError, retryWithBackoff } from './error-handler.js';
@@ -53,7 +56,8 @@ import {
   buildReviewIssueDescription,
   buildRevisionIssueDescription,
 } from './quality-gate.js';
-import type { OrchestratorConfig } from './types.js';
+import { TokenTracker } from './token-tracker.js';
+import type { EscalationRecord, OrchestratorConfig } from './types.js';
 import { WorktreeManager } from './worktree-manager.js';
 
 const log = createChildLogger('pipeline-runner');
@@ -70,6 +74,13 @@ export class PipelineRunner {
 
   /** Track revision count per phase number. */
   private readonly revisionCounts = new Map<number, number>();
+
+  /** Optional notification service for posting pipeline activity. */
+  private notificationService: NotificationService | null = null;
+  /** Token usage tracker for observability. */
+  private readonly tokenTracker = new TokenTracker();
+  /** Pending escalations awaiting user resolution. */
+  private readonly pendingEscalations = new Map<string, EscalationRecord>();
 
   /** Worktree manager for parallel phase isolation. */
   private worktreeManager: WorktreeManager | null = null;
@@ -145,6 +156,12 @@ export class PipelineRunner {
     // Store issue on pipeline state (no phase yet -- CEO is pipeline-level)
     await this.persistState();
 
+    await this.notificationService?.notify({
+      type: 'pipeline_started',
+      projectPath,
+      brief,
+    });
+
     log.info(
       { projectPath, issueId: spawn.issueId, runId: spawn.runId },
       'Pipeline started, CEO spawned',
@@ -187,6 +204,142 @@ export class PipelineRunner {
   destroy(): void {
     this.healthMonitor.destroy();
     void this.worktreeManager?.cleanupAll().catch(() => {});
+  }
+
+  /**
+   * Set the notification service for pipeline activity posting.
+   * Called after construction, before start().
+   */
+  setNotificationService(service: NotificationService): void {
+    this.notificationService = service;
+  }
+
+  /**
+   * Pause the pipeline. Only valid when status is 'running'.
+   * Prevents new agents from being spawned. In-flight agents continue.
+   */
+  async pause(): Promise<void> {
+    if (!this.state) {
+      throw new Error('Pipeline not started');
+    }
+    const result = pipelineTransition(this.state, {
+      type: 'PAUSE_REQUESTED',
+    });
+    if (!result.valid) {
+      throw new Error(
+        `Cannot pause pipeline: ${result.description}`,
+      );
+    }
+    this.state = result.state;
+    await this.persistState();
+    await this.notificationService?.notify({
+      type: 'pipeline_paused',
+      reason: 'User requested pause',
+    });
+    log.info('Pipeline paused');
+  }
+
+  /**
+   * Resume the pipeline. Only valid when status is 'paused'.
+   * Restarts pending phases whose dependencies are met.
+   */
+  async resume(): Promise<void> {
+    if (!this.state) {
+      throw new Error('Pipeline not started');
+    }
+    const result = pipelineTransition(this.state, {
+      type: 'RESUME_REQUESTED',
+    });
+    if (!result.valid) {
+      throw new Error(
+        `Cannot resume pipeline: ${result.description}`,
+      );
+    }
+    this.state = result.state;
+
+    // Restart pending phases whose dependencies are met
+    const readyPhases = this.findReadyPhases();
+    for (const phaseNumber of readyPhases) {
+      await this.startPhase(phaseNumber);
+    }
+
+    await this.persistState();
+    await this.notificationService?.notify({ type: 'pipeline_resumed' });
+    log.info('Pipeline resumed');
+  }
+
+  /**
+   * Retry a failed phase. Resets the phase to pending and dispatches
+   * DEPENDENCIES_MET to restart it.
+   *
+   * @param phaseNumber - The phase to retry
+   * @param _fromStep - Optional step to retry from (reserved for future use)
+   */
+  async retryPhase(phaseNumber: number, _fromStep?: string): Promise<void> {
+    if (!this.state) {
+      throw new Error('Pipeline not started');
+    }
+
+    const phase = this.state.phases.find((p) => p.phaseNumber === phaseNumber);
+    if (!phase) {
+      throw new Error(`Phase ${phaseNumber} not found`);
+    }
+    if (phase.status !== 'failed') {
+      throw new Error(
+        `Phase ${phaseNumber} is not failed (current: ${phase.status})`,
+      );
+    }
+
+    // Reset phase to pending via RETRY_PHASE
+    await this.handlePhaseEvent(phaseNumber, { type: 'RETRY_PHASE' });
+    // Start it again
+    await this.handlePhaseEvent(phaseNumber, { type: 'DEPENDENCIES_MET' });
+  }
+
+  /**
+   * Resolve a pending escalation. Records the decision in the audit log
+   * and advances the phase.
+   *
+   * @param escalationId - The escalation record ID
+   * @param decision - The user's decision string
+   */
+  async resolveEscalation(
+    escalationId: string,
+    decision: string,
+  ): Promise<void> {
+    const escalation = this.pendingEscalations.get(escalationId);
+    if (!escalation) {
+      throw new Error(`Escalation ${escalationId} not found`);
+    }
+
+    escalation.resolvedAt = new Date().toISOString();
+    escalation.resolution = decision;
+    this.pendingEscalations.delete(escalationId);
+
+    await this.auditLog.record({
+      phase: escalation.phaseNumber,
+      decisionType: 'quality_gate',
+      context: escalation.context,
+      optionsConsidered: escalation.options,
+      choice: decision,
+      reasoning: `User resolved escalation ${escalationId}`,
+    });
+
+    await this.advancePhaseAfterDecision(escalation.phaseNumber, decision);
+  }
+
+  /**
+   * Get per-phase token usage summary.
+   */
+  getTokenSummary() {
+    return this.tokenTracker.getSummary();
+  }
+
+  /**
+   * Get all pending escalations awaiting user resolution.
+   */
+  getPendingEscalations(): EscalationRecord[] {
+    return Array.from(this.pendingEscalations.values());
   }
 
   // ── Private: Agent completion processing ────────────────────────
@@ -266,6 +419,18 @@ export class PipelineRunner {
       // Special case: PROJECT_READY -> pipeline-level handling
       if (signal.type === 'PROJECT_READY') {
         await this.handleProjectReady();
+        return;
+      }
+
+      // Special case: DECISION_NEEDED -> create escalation, notify, do NOT advance
+      if (signal.type === 'DECISION_NEEDED') {
+        const phaseNumber = signal.phase || (phase?.phaseNumber ?? 0);
+        if (phaseNumber > 0) {
+          await this.handleDecisionNeeded(
+            phaseNumber,
+            signal as DecisionNeededSignal,
+          );
+        }
         return;
       }
 
@@ -434,6 +599,12 @@ export class PipelineRunner {
     phaseNumber: number,
     phase: PhaseState,
   ): Promise<void> {
+    // Do not spawn new agents while pipeline is paused (Pitfall 5)
+    if (this.state?.status === 'paused') {
+      log.info({ phaseNumber }, 'Pipeline paused, deferring agent spawn');
+      return;
+    }
+
     switch (phase.status) {
       case 'discussing':
         await this.spawnDiscusser(phaseNumber);
@@ -515,6 +686,12 @@ export class PipelineRunner {
 
     log.info({ phaseNumber }, 'Phase completed');
 
+    await this.notificationService?.notify({
+      type: 'phase_completed',
+      phaseNumber,
+      phaseName: `Phase ${phaseNumber}`,
+    });
+
     // Enqueue completed phase in merge queue for ordered merging
     await this.mergeQueue?.enqueue(phaseNumber);
 
@@ -527,6 +704,10 @@ export class PipelineRunner {
       if (doneResult.valid) {
         this.state = doneResult.state;
       }
+      await this.notificationService?.notify({
+        type: 'pipeline_completed',
+        totalPhases: this.state.phases.length,
+      });
       await this.persistState();
       log.info('All phases completed successfully');
       return;
@@ -551,6 +732,14 @@ export class PipelineRunner {
     if (!this.state) return;
 
     const errorMessage = phase.error?.message ?? 'Unknown error';
+
+    await this.notificationService?.notify({
+      type: 'phase_failed',
+      phaseNumber,
+      phaseName: `Phase ${phaseNumber}`,
+      error: errorMessage,
+    });
+
     const classified = classifyError(errorMessage);
 
     log.info(
@@ -631,6 +820,10 @@ export class PipelineRunner {
       });
       if (failResult.valid) {
         this.state = failResult.state;
+        await this.notificationService?.notify({
+          type: 'pipeline_failed',
+          error: `Phase ${phaseNumber} failed: ${errorMessage}`,
+        });
       }
     }
 
@@ -889,6 +1082,62 @@ export class PipelineRunner {
     }
 
     await this.setAgentOnPhase(phaseNumber, issueId, invokeResult.value.runId);
+  }
+
+  // ── Private: Escalation / decision handling ─────────────────────
+
+  /**
+   * Handle a DECISION_NEEDED signal: create an escalation record,
+   * notify the user, and do NOT advance the phase (waits for resolution).
+   */
+  private async handleDecisionNeeded(
+    phaseNumber: number,
+    signal: DecisionNeededSignal,
+  ): Promise<void> {
+    const id = `ESC-${randomUUID()}`;
+    const escalation: EscalationRecord = {
+      id,
+      phaseNumber,
+      context: signal.context,
+      options: signal.options,
+      createdAt: new Date().toISOString(),
+      resolvedAt: null,
+      resolution: null,
+    };
+
+    this.pendingEscalations.set(id, escalation);
+
+    await this.notificationService?.notify({
+      type: 'escalation',
+      phaseNumber,
+      context: signal.context,
+      options: signal.options,
+    });
+
+    await this.auditLog.record({
+      phase: phaseNumber,
+      decisionType: 'quality_gate',
+      context: `DECISION_NEEDED: ${signal.context}`,
+      optionsConsidered: signal.options,
+      choice: 'awaiting_user',
+      reasoning: 'Escalated to user for decision',
+    });
+
+    log.info(
+      { phaseNumber, escalationId: id },
+      'Escalation created, awaiting user resolution',
+    );
+  }
+
+  /**
+   * Advance a phase after a user decision resolves an escalation.
+   * Dispatches STEP_COMPLETED to move the phase forward.
+   */
+  private async advancePhaseAfterDecision(
+    phaseNumber: number,
+    _decision: string,
+  ): Promise<void> {
+    await this.handlePhaseEvent(phaseNumber, { type: 'STEP_COMPLETED' });
   }
 
   // ── Private: Helpers ────────────────────────────────────────────

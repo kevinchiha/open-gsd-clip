@@ -29,10 +29,14 @@ export {
   buildRevisionContext,
   buildRevisionIssueDescription,
 } from './quality-gate.js';
+// Token tracker
+export { TokenTracker } from './token-tracker.js';
+export type { PhaseTokenUsage, TokenUsage } from './token-tracker.js';
 // Types
 export type {
   AuditEntry,
   ClassifiedError,
+  EscalationRecord,
   HealthConfig,
   OrchestratorConfig,
   RetryConfig,
