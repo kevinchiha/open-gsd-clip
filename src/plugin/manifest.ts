@@ -8,17 +8,17 @@ import type { PaperclipPluginManifestV1 } from './types.js';
  * provided to satisfy either import style.
  */
 const manifest: PaperclipPluginManifestV1 = {
-  id: '@open-gsd/clip',
+  id: 'open-gsd-clip',
   apiVersion: 1,
   version: '0.1.0',
   displayName: 'GSD Orchestrator',
   description:
     'Automates the full GSD development pipeline via agent orchestration',
+  author: 'open-gsd',
   categories: ['automation'],
   capabilities: [
-    'data.read',
-    'data.write',
-    'plugin.state',
+    'plugin.state.read',
+    'plugin.state.write',
     'events.subscribe',
     'agent.tools.register',
   ],

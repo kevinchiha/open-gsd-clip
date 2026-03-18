@@ -55,6 +55,7 @@ export interface PaperclipPluginManifestV1 {
   version: string;
   displayName: string;
   description: string;
+  author: string;
   categories: string[];
   capabilities: string[];
   entrypoints: {
