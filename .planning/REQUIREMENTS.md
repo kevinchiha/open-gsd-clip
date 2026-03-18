@@ -15,7 +15,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PIPE-04**: gsd-tools.cjs bridge parses roadmap phases, dependencies, status, and plan indices via typed wrapper
 - [x] **PIPE-05**: Signal parser extracts GSD_SIGNAL structured data from Paperclip issue comments
 - [x] **PIPE-06**: Phase dependency resolver determines which phases can run in parallel vs must run sequentially based on roadmap data
-- [ ] **PIPE-07**: Sequential merge strategy ensures parallel phases commit results in roadmap order without git conflicts
+- [x] **PIPE-07**: Sequential merge strategy ensures parallel phases commit results in roadmap order without git conflicts
 - [x] **PIPE-08**: Pipeline executes all phases end-to-end (discuss -> plan -> execute -> verify per phase) without human intervention
 
 ### Agent System
@@ -35,7 +35,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Execution & Reliability
 
-- [ ] **EXEC-01**: Independent phases execute in parallel when roadmap allows
+- [x] **EXEC-01**: Independent phases execute in parallel when roadmap allows
 - [x] **EXEC-02**: Error handler classifies failures into categories (transient, context overflow, test failure, merge conflict, fatal) and applies appropriate recovery strategy
 - [x] **EXEC-03**: Retry manager retries failed operations with exponential backoff and jitter
 - [x] **EXEC-04**: Stale agent detection identifies hung agents via progress-based health checks (no output for configurable threshold) and respawns them
@@ -115,7 +115,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-04 | Phase 1 | Complete |
 | PIPE-05 | Phase 1 | Complete |
 | PIPE-06 | Phase 2 | Complete |
-| PIPE-07 | Phase 5 | Pending |
+| PIPE-07 | Phase 5 | Complete |
 | PIPE-08 | Phase 4 | Complete |
 | AGNT-01 | Phase 3 | Complete |
 | AGNT-02 | Phase 3 | Complete |
@@ -129,7 +129,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGNT-10 | Phase 4 | Complete |
 | AGNT-11 | Phase 6 | Pending |
 | AGNT-12 | Phase 4 | Complete |
-| EXEC-01 | Phase 5 | Pending |
+| EXEC-01 | Phase 5 | Complete |
 | EXEC-02 | Phase 4 | Complete |
 | EXEC-03 | Phase 4 | Complete |
 | EXEC-04 | Phase 4 | Complete |

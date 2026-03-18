@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 04-04-PLAN.md
-last_updated: "2026-03-18T17:03:40.526Z"
-last_activity: 2026-03-18 -- Completed 04-04 (Pipeline Runner and Orchestrator Wiring)
+status: in_progress
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-18T17:15:27.560Z"
+last_activity: 2026-03-18 -- Completed 05-01 (WorktreeManager and MergeQueue)
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 14
-  completed_plans: 14
-  percent: 100
+  total_plans: 16
+  completed_plans: 15
+  percent: 94
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Send a project brief via Discord, come back later to a fully built and verified codebase
-**Current focus:** Phase 4: Sequential Pipeline Execution
+**Current focus:** Phase 5: Parallel Execution and Merge Strategy
 
 ## Current Position
 
-Phase: 4 of 6 (Sequential Pipeline Execution) -- COMPLETE
-Plan: 4 of 4 in current phase (04-04 complete)
-Status: Phase 4 complete, ready for Phase 5
-Last activity: 2026-03-18 -- Completed 04-04 (Pipeline Runner and Orchestrator Wiring)
+Phase: 5 of 6 (Parallel Execution and Merge Strategy) -- IN PROGRESS
+Plan: 1 of 2 in current phase (05-01 complete)
+Status: Plan 05-01 complete, ready for 05-02
+Last activity: 2026-03-18 -- Completed 05-01 (WorktreeManager and MergeQueue)
 
-Progress: [██████████] 100%
+Progress: [█████████░] 94%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████████] 100%
 | Phase 01 P02 | 8min | 2 tasks | 7 files |
 | Phase 04 P04 | 10min | 2 tasks | 5 files |
 | Phase 04 P03 | 3min | 2 tasks | 4 files |
+| Phase 05 P01 | 6min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,9 @@ Recent decisions affecting current work:
 - [Phase 04 P04]: Revision limit triggers reviewing->discussing->STEP_FAILED two-step transition since reviewing FSM has no STEP_FAILED
 - [Phase 04 P04]: buildCeoReviewContext/buildRevisionContext not used by PipelineRunner -- CEO review uses custom issue creation
 - [Phase 04 P04]: AuditLog mocked in pipeline-runner tests to avoid filesystem writes at test project paths
+- [Phase 05]: Mock type casting via 'as unknown as Mock' for execa -- execa's ResultPromise type is too complex for vi.mocked
+- [Phase 05]: Index-based drain pointer in MergeQueue instead of phase-number tracking -- simpler, handles edge cases naturally
+- [Phase 05]: Stale branch check before createWorktree: git branch --list then cleanup if found (Pitfall 1)
 
 ### Pending Todos
 
@@ -128,7 +132,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T17:00:32Z
-Stopped at: Completed 04-04-PLAN.md
+Last session: 2026-03-18T17:15:27.557Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None
-Next action: Phase 4 complete. All 14 plans across 4 phases done.
+Next action: Execute 05-02-PLAN.md (PipelineRunner parallel refactor)
