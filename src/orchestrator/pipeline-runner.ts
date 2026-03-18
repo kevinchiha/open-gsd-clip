@@ -14,69 +14,57 @@
  * to pending. Re-planning is capped at maxReplans=2.
  */
 
-import {
-  createInitialPhaseState,
-  phaseTransition,
-} from '../pipeline/phase-machine.js';
+import { ensureAgentsExist } from '../agents/factory.js';
+import { mapSignalToPhaseEvent, spawnAgent } from '../agents/invoker.js';
+import type {
+  AgentDefinition,
+  AgentRole,
+  HostServices,
+} from '../agents/types.js';
 import {
   cascadeFailure,
   createInitialPipelineState,
   pipelineTransition,
 } from '../pipeline/fsm.js';
+import {
+  createInitialPhaseState,
+  phaseTransition,
+} from '../pipeline/phase-machine.js';
 import { buildExecutionPlan } from '../pipeline/resolver.js';
 import { serialize } from '../pipeline/serialization.js';
 import type {
-  ExecutionPlan,
   PhaseEvent,
   PhaseState,
   PipelineState,
 } from '../pipeline/types.js';
-import {
-  ensureAgentsExist,
-} from '../agents/factory.js';
-import {
-  mapSignalToPhaseEvent,
-  spawnAgent,
-} from '../agents/invoker.js';
-import type { AgentDefinition, AgentRole, HostServices } from '../agents/types.js';
+import { createChildLogger } from '../shared/logger.js';
 import { parseSignal } from '../signals/parser.js';
 import type { GsdSignal } from '../signals/types.js';
-import { createChildLogger } from '../shared/logger.js';
 
 import { AuditLog } from './audit-log.js';
 import { classifyError, retryWithBackoff } from './error-handler.js';
-import { HealthMonitor } from './health-monitor.js';
 import { SerialEventQueue } from './event-queue.js';
+import { HealthMonitor } from './health-monitor.js';
 import {
-  buildCeoReviewContext,
   buildReviewIssueDescription,
-  buildRevisionContext,
   buildRevisionIssueDescription,
 } from './quality-gate.js';
 import type { OrchestratorConfig } from './types.js';
 
 const log = createChildLogger('pipeline-runner');
 
-/**
- * Maximum number of re-plans per phase before failing.
- */
-const MAX_REPLANS = 2;
-
 export class PipelineRunner {
   private state: PipelineState | null = null;
   private readonly services: HostServices;
   private readonly config: OrchestratorConfig;
   private readonly companyId: string;
-  private readonly auditLog: AuditLog;
+  private auditLog: AuditLog;
   private readonly healthMonitor: HealthMonitor;
   private readonly eventQueue: SerialEventQueue;
   private agents: Record<AgentRole, AgentDefinition> | null = null;
 
   /** Track revision count per phase number. */
   private readonly revisionCounts = new Map<number, number>();
-
-  /** Track re-plan count per phase number. */
-  private readonly replanCounts = new Map<number, number>();
 
   constructor(services: HostServices, config: OrchestratorConfig) {
     this.services = services;
@@ -116,7 +104,7 @@ export class PipelineRunner {
     this.state = result.state;
 
     // Re-initialize audit log with actual project path
-    (this as { auditLog: AuditLog }).auditLog = new AuditLog(projectPath);
+    this.auditLog = new AuditLog(projectPath);
 
     // Ensure all GSD agents exist
     this.agents = await ensureAgentsExist(
@@ -127,9 +115,10 @@ export class PipelineRunner {
     );
 
     // Spawn CEO with /gsd:new-project --auto
+    const ceoAgentId = this.agents.ceo.agentId;
     const spawn = await retryWithBackoff(
       () =>
-        spawnAgent(this.services, this.companyId, this.agents!.ceo.agentId, {
+        spawnAgent(this.services, this.companyId, ceoAgentId, {
           role: 'ceo',
           projectPath,
           gsdCommand: '/gsd:new-project --auto',
@@ -242,7 +231,7 @@ export class PipelineRunner {
       let signal: GsdSignal | null = null;
       const comments = commentsResult.value;
       for (let i = comments.length - 1; i >= 0; i--) {
-        const parsed = parseSignal(comments[i]!.body);
+        const parsed = parseSignal(comments[i]?.body);
         if (parsed) {
           signal = parsed;
           break;
@@ -270,7 +259,10 @@ export class PipelineRunner {
       // Map signal to phase event
       const phaseEvent = mapSignalToPhaseEvent(signal);
       if (!phaseEvent) {
-        log.debug({ signalType: signal.type }, 'Signal does not map to phase event');
+        log.debug(
+          { signalType: signal.type },
+          'Signal does not map to phase event',
+        );
         return;
       }
 
@@ -317,7 +309,10 @@ export class PipelineRunner {
       type: 'PROJECT_READY',
     });
     if (!analyzeResult.valid) {
-      log.error({ description: analyzeResult.description }, 'PROJECT_READY transition failed');
+      log.error(
+        { description: analyzeResult.description },
+        'PROJECT_READY transition failed',
+      );
       return;
     }
     this.state = analyzeResult.state;
@@ -350,7 +345,10 @@ export class PipelineRunner {
       executionPlan,
     });
     if (!runResult.valid) {
-      log.error({ description: runResult.description }, 'ANALYSIS_COMPLETE transition failed');
+      log.error(
+        { description: runResult.description },
+        'ANALYSIS_COMPLETE transition failed',
+      );
       return;
     }
     this.state = runResult.state;
@@ -491,11 +489,18 @@ export class PipelineRunner {
     const classified = classifyError(errorMessage);
 
     log.info(
-      { phaseNumber, errorType: classified.type, retryable: classified.retryable },
+      {
+        phaseNumber,
+        errorType: classified.type,
+        retryable: classified.retryable,
+      },
       'Phase failed, evaluating recovery',
     );
 
-    if (classified.retryable && (phase.error?.retryCount ?? 0) < classified.maxRetries) {
+    if (
+      classified.retryable &&
+      (phase.error?.retryCount ?? 0) < classified.maxRetries
+    ) {
       // Record retry decision
       await this.auditLog.record({
         phase: phaseNumber,
@@ -529,7 +534,12 @@ export class PipelineRunner {
     // Cascade failure to dependent phases
     if (this.state.executionPlan && phase.error) {
       const dependents = this.buildDependentsMap();
-      this.state = cascadeFailure(this.state, phaseNumber, phase.error, dependents);
+      this.state = cascadeFailure(
+        this.state,
+        phaseNumber,
+        phase.error,
+        dependents,
+      );
     }
 
     // Check if any phases can still proceed
@@ -563,7 +573,11 @@ export class PipelineRunner {
     this.revisionCounts.set(phaseNumber, count);
 
     log.info(
-      { phaseNumber, revisionCount: count, maxRevisions: this.config.maxRevisions },
+      {
+        phaseNumber,
+        revisionCount: count,
+        maxRevisions: this.config.maxRevisions,
+      },
       'Revision requested',
     );
 
@@ -610,19 +624,16 @@ export class PipelineRunner {
   private async spawnDiscusser(phaseNumber: number): Promise<void> {
     if (!this.state || !this.agents) return;
 
+    const agentId = this.agents.discusser.agentId;
+    const projectPath = this.state.projectPath;
     const spawn = await retryWithBackoff(
       () =>
-        spawnAgent(
-          this.services,
-          this.companyId,
-          this.agents!.discusser.agentId,
-          {
-            role: 'discusser',
-            projectPath: this.state!.projectPath,
-            phaseNumber,
-            gsdCommand: `/gsd:discuss-phase ${phaseNumber} --auto`,
-          },
-        ),
+        spawnAgent(this.services, this.companyId, agentId, {
+          role: 'discusser',
+          projectPath,
+          phaseNumber,
+          gsdCommand: `/gsd:discuss-phase ${phaseNumber} --auto`,
+        }),
       this.config.retry,
     );
 
@@ -647,7 +658,6 @@ export class PipelineRunner {
     const paddedPhase = String(phaseNumber).padStart(2, '0');
     const contextMdPath = `.planning/phases/${paddedPhase}-*/XX-CONTEXT.md`;
 
-    const ctx = buildCeoReviewContext(projectPath, phaseNumber);
     const description = buildReviewIssueDescription(
       projectPath,
       phaseNumber,
@@ -690,19 +700,16 @@ export class PipelineRunner {
   private async spawnPlanner(phaseNumber: number): Promise<void> {
     if (!this.state || !this.agents) return;
 
+    const agentId = this.agents.planner.agentId;
+    const projectPath = this.state.projectPath;
     const spawn = await retryWithBackoff(
       () =>
-        spawnAgent(
-          this.services,
-          this.companyId,
-          this.agents!.planner.agentId,
-          {
-            role: 'planner',
-            projectPath: this.state!.projectPath,
-            phaseNumber,
-            gsdCommand: `/gsd:plan-phase ${phaseNumber}`,
-          },
-        ),
+        spawnAgent(this.services, this.companyId, agentId, {
+          role: 'planner',
+          projectPath,
+          phaseNumber,
+          gsdCommand: `/gsd:plan-phase ${phaseNumber}`,
+        }),
       this.config.retry,
     );
 
@@ -712,19 +719,16 @@ export class PipelineRunner {
   private async spawnExecutor(phaseNumber: number): Promise<void> {
     if (!this.state || !this.agents) return;
 
+    const agentId = this.agents.executor.agentId;
+    const projectPath = this.state.projectPath;
     const spawn = await retryWithBackoff(
       () =>
-        spawnAgent(
-          this.services,
-          this.companyId,
-          this.agents!.executor.agentId,
-          {
-            role: 'executor',
-            projectPath: this.state!.projectPath,
-            phaseNumber,
-            gsdCommand: `/gsd:execute-phase ${phaseNumber}`,
-          },
-        ),
+        spawnAgent(this.services, this.companyId, agentId, {
+          role: 'executor',
+          projectPath,
+          phaseNumber,
+          gsdCommand: `/gsd:execute-phase ${phaseNumber}`,
+        }),
       this.config.retry,
     );
 
@@ -734,19 +738,16 @@ export class PipelineRunner {
   private async spawnVerifier(phaseNumber: number): Promise<void> {
     if (!this.state || !this.agents) return;
 
+    const agentId = this.agents.verifier.agentId;
+    const projectPath = this.state.projectPath;
     const spawn = await retryWithBackoff(
       () =>
-        spawnAgent(
-          this.services,
-          this.companyId,
-          this.agents!.verifier.agentId,
-          {
-            role: 'verifier',
-            projectPath: this.state!.projectPath,
-            phaseNumber,
-            gsdCommand: `/gsd:verify-work ${phaseNumber}`,
-          },
-        ),
+        spawnAgent(this.services, this.companyId, agentId, {
+          role: 'verifier',
+          projectPath,
+          phaseNumber,
+          gsdCommand: `/gsd:verify-work ${phaseNumber}`,
+        }),
       this.config.retry,
     );
 
@@ -760,7 +761,6 @@ export class PipelineRunner {
     if (!this.state || !this.agents) return;
 
     const projectPath = this.state.projectPath;
-    const ctx = buildRevisionContext(projectPath, phaseNumber, feedback);
     const gsdCommand = `/gsd:discuss-phase ${phaseNumber} --auto`;
     const description = buildRevisionIssueDescription(
       projectPath,
@@ -853,10 +853,12 @@ export class PipelineRunner {
     // For a sequential plan, each phase depends on the previous
     const order = this.state.executionPlan.phaseOrder;
     for (let i = 0; i < order.length; i++) {
-      const phaseNum = order[i]!;
+      const phaseNum = order[i];
+      if (phaseNum === undefined) continue;
       const deps: number[] = [];
-      if (i + 1 < order.length) {
-        deps.push(order[i + 1]!);
+      const next = order[i + 1];
+      if (next !== undefined) {
+        deps.push(next);
       }
       dependents.set(phaseNum, deps);
     }

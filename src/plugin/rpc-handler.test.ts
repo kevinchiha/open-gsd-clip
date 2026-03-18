@@ -1,5 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createRpcHandler } from './rpc-handler.js';
+
+// Suppress logger output in tests
+vi.mock('../shared/logger.js', () => ({
+  createChildLogger: () => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
 
 describe('rpc-handler', () => {
   const handler = createRpcHandler();
@@ -122,6 +132,148 @@ describe('rpc-handler', () => {
         jsonrpc: '2.0',
         id: 22,
         result: { received: true, status: 'failed' },
+      });
+    });
+  });
+
+  describe('onEvent with orchestrator', () => {
+    it('calls handleAgentCompletion on succeeded event', async () => {
+      const mockOrchestrator = {
+        handleAgentCompletion: vi.fn().mockResolvedValue(undefined),
+        recordActivity: vi.fn(),
+      };
+
+      const handlerWithOrch = createRpcHandler(
+        mockOrchestrator as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      await handlerWithOrch({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: {
+          type: 'heartbeat.run.status',
+          data: {
+            status: 'succeeded',
+            agentId: 'agent-1',
+            runId: 'run-1',
+            issueId: 'issue-1',
+          },
+        },
+        id: 30,
+      });
+
+      expect(mockOrchestrator.handleAgentCompletion).toHaveBeenCalledWith({
+        status: 'succeeded',
+        agentId: 'agent-1',
+        runId: 'run-1',
+        issueId: 'issue-1',
+      });
+    });
+
+    it('calls handleAgentCompletion on failed event', async () => {
+      const mockOrchestrator = {
+        handleAgentCompletion: vi.fn().mockResolvedValue(undefined),
+        recordActivity: vi.fn(),
+      };
+
+      const handlerWithOrch = createRpcHandler(
+        mockOrchestrator as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      await handlerWithOrch({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: {
+          type: 'heartbeat.run.status',
+          data: {
+            status: 'failed',
+            agentId: 'agent-2',
+            runId: 'run-2',
+            issueId: 'issue-2',
+          },
+        },
+        id: 31,
+      });
+
+      expect(mockOrchestrator.handleAgentCompletion).toHaveBeenCalledWith({
+        status: 'failed',
+        agentId: 'agent-2',
+        runId: 'run-2',
+        issueId: 'issue-2',
+      });
+    });
+
+    it('calls recordActivity on running event with issueId', async () => {
+      const mockOrchestrator = {
+        handleAgentCompletion: vi.fn().mockResolvedValue(undefined),
+        recordActivity: vi.fn(),
+      };
+
+      const handlerWithOrch = createRpcHandler(
+        mockOrchestrator as unknown as Parameters<typeof createRpcHandler>[0],
+      );
+
+      await handlerWithOrch({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: {
+          type: 'heartbeat.run.status',
+          data: {
+            status: 'running',
+            agentId: 'agent-1',
+            runId: 'run-1',
+            issueId: 'issue-1',
+          },
+        },
+        id: 32,
+      });
+
+      expect(mockOrchestrator.recordActivity).toHaveBeenCalledWith('issue-1');
+      expect(mockOrchestrator.handleAgentCompletion).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onEvent without orchestrator', () => {
+    it('returns received: true without errors', async () => {
+      const handlerNoOrch = createRpcHandler();
+
+      const response = await handlerNoOrch({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: {
+          type: 'heartbeat.run.status',
+          data: {
+            status: 'succeeded',
+            agentId: 'agent-1',
+            runId: 'run-1',
+            issueId: 'issue-1',
+          },
+        },
+        id: 33,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 33,
+        result: { received: true, status: 'succeeded' },
+      });
+    });
+  });
+
+  describe('backward compatibility', () => {
+    it('createRpcHandler() with no args still works', async () => {
+      const handlerCompat = createRpcHandler();
+
+      const response = await handlerCompat({
+        jsonrpc: '2.0',
+        method: 'health',
+        id: 34,
+      });
+
+      expect(response).toEqual({
+        jsonrpc: '2.0',
+        result: { status: 'ok' },
+        id: 34,
       });
     });
   });

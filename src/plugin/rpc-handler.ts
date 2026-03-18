@@ -1,3 +1,4 @@
+import type { PipelineRunner } from '../orchestrator/pipeline-runner.js';
 import { createChildLogger } from '../shared/logger.js';
 import {
   type JsonRpcErrorResponse,
@@ -49,88 +50,110 @@ function error(
   return { jsonrpc: '2.0', error: { code, message }, id };
 }
 
-const methods: Record<string, MethodHandler> = {
-  async initialize(_params, id) {
-    log.info('Plugin initialized');
-    return success(manifest, id);
-  },
+/**
+ * Build method handlers, optionally wired to an orchestrator instance.
+ */
+function buildMethods(
+  orchestrator?: PipelineRunner | null,
+): Record<string, MethodHandler> {
+  return {
+    async initialize(_params, id) {
+      log.info('Plugin initialized');
+      return success(manifest, id);
+    },
 
-  async health(_params, id) {
-    return success({ status: 'ok' }, id);
-  },
+    async health(_params, id) {
+      return success({ status: 'ok' }, id);
+    },
 
-  async onEvent(params, id) {
-    const event = params as { type: string; data: unknown } | undefined;
+    async onEvent(params, id) {
+      const event = params as { type: string; data: unknown } | undefined;
 
-    if (!event?.type) {
-      log.debug({ params }, 'Received event without type');
-      return success({ received: true }, id);
-    }
-
-    log.debug({ eventType: event.type }, 'Received event');
-
-    // Handle run status events for agent completion detection
-    if (event.type === 'heartbeat.run.status') {
-      const run = event.data as {
-        status: string;
-        agentId: string;
-        runId: string;
-        issueId?: string;
-      };
-
-      // Only log terminal states at info level
-      if (run.status === 'succeeded' || run.status === 'failed') {
-        log.info(
-          {
-            status: run.status,
-            agentId: run.agentId,
-            runId: run.runId,
-            issueId: run.issueId,
-          },
-          'Agent run completed',
-        );
-
-        if (run.issueId) {
-          // Phase 4 will add: fetch comments via services.issues.listComments,
-          // parse GSD_SIGNAL, map to PhaseEvent, dispatch to FSM
-          log.info(
-            { issueId: run.issueId },
-            'Agent completed for issue (signal parsing deferred to Phase 4)',
-          );
-        }
+      if (!event?.type) {
+        log.debug({ params }, 'Received event without type');
+        return success({ received: true }, id);
       }
 
-      return success({ received: true, status: run.status }, id);
-    }
+      log.debug({ eventType: event.type }, 'Received event');
 
-    // Default: acknowledge unknown event types
-    return success({ received: true }, id);
-  },
+      // Handle run status events for agent completion detection
+      if (event.type === 'heartbeat.run.status') {
+        const run = event.data as {
+          status: string;
+          agentId: string;
+          runId: string;
+          issueId?: string;
+        };
 
-  async getState(_params, id) {
-    return success({ status: 'not_implemented' }, id);
-  },
+        if (orchestrator) {
+          if (run.status === 'running' && run.issueId) {
+            // Record activity for health monitoring
+            orchestrator.recordActivity(run.issueId);
+          } else if (run.status === 'succeeded' || run.status === 'failed') {
+            // Dispatch terminal events to orchestrator
+            log.info(
+              {
+                status: run.status,
+                agentId: run.agentId,
+                runId: run.runId,
+                issueId: run.issueId,
+              },
+              'Agent run completed, dispatching to orchestrator',
+            );
 
-  async executeAction(_params, id) {
-    return success({ status: 'not_implemented' }, id);
-  },
+            void orchestrator.handleAgentCompletion(run);
+          }
+        } else {
+          // No orchestrator -- log terminal states only
+          if (run.status === 'succeeded' || run.status === 'failed') {
+            log.info(
+              {
+                status: run.status,
+                agentId: run.agentId,
+                runId: run.runId,
+                issueId: run.issueId,
+              },
+              'Agent run completed (no orchestrator attached)',
+            );
+          }
+        }
 
-  async registerTools(_params, id) {
-    return success({ status: 'not_implemented' }, id);
-  },
+        return success({ received: true, status: run.status }, id);
+      }
 
-  async configure(_params, id) {
-    return success({ status: 'not_implemented' }, id);
-  },
+      // Default: acknowledge unknown event types
+      return success({ received: true }, id);
+    },
 
-  async shutdown(_params, id) {
-    log.info('Plugin shutting down');
-    return success({ status: 'shutting_down' }, id);
-  },
-};
+    async getState(_params, id) {
+      return success({ status: 'not_implemented' }, id);
+    },
+
+    async executeAction(_params, id) {
+      return success({ status: 'not_implemented' }, id);
+    },
+
+    async registerTools(_params, id) {
+      return success({ status: 'not_implemented' }, id);
+    },
+
+    async configure(_params, id) {
+      return success({ status: 'not_implemented' }, id);
+    },
+
+    async shutdown(_params, id) {
+      log.info('Plugin shutting down');
+      return success({ status: 'shutting_down' }, id);
+    },
+  };
+}
 
 /**
  * Creates a JSON-RPC 2.0 method dispatcher.
+ *
+ * Optionally accepts a PipelineRunner instance. When provided, onEvent
+ * dispatches agent completion events to the orchestrator. When omitted,
+ * events are logged but not dispatched (backward compatible).
  *
  * Returns an async function that accepts a raw parsed JSON message,
  * validates it as a JSON-RPC 2.0 request, routes to the appropriate handler,
@@ -138,7 +161,8 @@ const methods: Record<string, MethodHandler> = {
  *
  * Notifications (requests without `id`) run the handler but return `undefined`.
  */
-export function createRpcHandler() {
+export function createRpcHandler(orchestrator?: PipelineRunner | null) {
+  const methods = buildMethods(orchestrator);
   return async (request: unknown): Promise<unknown> => {
     // Extract id early for error responses (even from invalid requests)
     const rawId =

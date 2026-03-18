@@ -1,10 +1,14 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { HostServices, AgentDefinition, AgentRole } from '../agents/types.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type {
+  AgentDefinition,
+  AgentRole,
+  HostServices,
+} from '../agents/types.js';
+import type { PhaseEvent } from '../pipeline/types.js';
 import type { GsdSignal } from '../signals/types.js';
-import type { PhaseEvent, ExecutionPlan } from '../pipeline/types.js';
 import { PipelineRunner } from './pipeline-runner.js';
-import { DEFAULT_CONFIG } from './types.js';
 import type { OrchestratorConfig } from './types.js';
+import { DEFAULT_CONFIG } from './types.js';
 
 // ── Mock modules ─────────────────────────────────────────────────────
 
@@ -56,9 +60,14 @@ vi.mock('../shared/logger.js', () => ({
 function createMockServices(): HostServices {
   return {
     agents: {
-      invoke: vi.fn().mockResolvedValue({ ok: true, value: { runId: 'run-1' } }),
+      invoke: vi
+        .fn()
+        .mockResolvedValue({ ok: true, value: { runId: 'run-1' } }),
       list: vi.fn().mockResolvedValue({ ok: true, value: [] }),
-      create: vi.fn().mockResolvedValue({ ok: true, value: { agentId: 'agent-1', role: 'ceo', name: 'GSD CEO' } }),
+      create: vi.fn().mockResolvedValue({
+        ok: true,
+        value: { agentId: 'agent-1', role: 'ceo', name: 'GSD CEO' },
+      }),
     },
     issues: {
       create: vi.fn().mockResolvedValue({ ok: true, value: { id: 'issue-1' } }),
@@ -71,14 +80,32 @@ function createMockServices(): HostServices {
 function createMockAgents(): Record<AgentRole, AgentDefinition> {
   return {
     ceo: { agentId: 'ceo-agent-id', role: 'ceo', name: 'GSD CEO' },
-    discusser: { agentId: 'discusser-agent-id', role: 'discusser', name: 'GSD Discusser' },
-    planner: { agentId: 'planner-agent-id', role: 'planner', name: 'GSD Planner' },
-    executor: { agentId: 'executor-agent-id', role: 'executor', name: 'GSD Executor' },
-    verifier: { agentId: 'verifier-agent-id', role: 'verifier', name: 'GSD Verifier' },
+    discusser: {
+      agentId: 'discusser-agent-id',
+      role: 'discusser',
+      name: 'GSD Discusser',
+    },
+    planner: {
+      agentId: 'planner-agent-id',
+      role: 'planner',
+      name: 'GSD Planner',
+    },
+    executor: {
+      agentId: 'executor-agent-id',
+      role: 'executor',
+      name: 'GSD Executor',
+    },
+    verifier: {
+      agentId: 'verifier-agent-id',
+      role: 'verifier',
+      name: 'GSD Verifier',
+    },
   };
 }
 
-function makeConfig(overrides?: Partial<OrchestratorConfig>): OrchestratorConfig {
+function makeConfig(
+  overrides?: Partial<OrchestratorConfig>,
+): OrchestratorConfig {
   return {
     ...DEFAULT_CONFIG,
     companyId: 'test-company',
@@ -117,24 +144,47 @@ describe('PipelineRunner', () => {
     const errorMod = await import('./error-handler.js');
     const qgMod = await import('./quality-gate.js');
 
-    ensureAgentsExist = factoryMod.ensureAgentsExist as ReturnType<typeof vi.fn>;
+    ensureAgentsExist = factoryMod.ensureAgentsExist as ReturnType<
+      typeof vi.fn
+    >;
     spawnAgent = invokerMod.spawnAgent as ReturnType<typeof vi.fn>;
-    mapSignalToPhaseEvent = invokerMod.mapSignalToPhaseEvent as ReturnType<typeof vi.fn>;
+    mapSignalToPhaseEvent = invokerMod.mapSignalToPhaseEvent as ReturnType<
+      typeof vi.fn
+    >;
     parseSignal = parserMod.parseSignal as ReturnType<typeof vi.fn>;
     classifyError = errorMod.classifyError as ReturnType<typeof vi.fn>;
-    buildCeoReviewContext = qgMod.buildCeoReviewContext as ReturnType<typeof vi.fn>;
-    buildReviewIssueDescription = qgMod.buildReviewIssueDescription as ReturnType<typeof vi.fn>;
-    buildRevisionContext = qgMod.buildRevisionContext as ReturnType<typeof vi.fn>;
-    buildRevisionIssueDescription = qgMod.buildRevisionIssueDescription as ReturnType<typeof vi.fn>;
+    buildCeoReviewContext = qgMod.buildCeoReviewContext as ReturnType<
+      typeof vi.fn
+    >;
+    buildReviewIssueDescription =
+      qgMod.buildReviewIssueDescription as ReturnType<typeof vi.fn>;
+    buildRevisionContext = qgMod.buildRevisionContext as ReturnType<
+      typeof vi.fn
+    >;
+    buildRevisionIssueDescription =
+      qgMod.buildRevisionIssueDescription as ReturnType<typeof vi.fn>;
 
     // Default mock implementations
     ensureAgentsExist.mockResolvedValue(createMockAgents());
     spawnAgent.mockResolvedValue({ issueId: 'issue-1', runId: 'run-1' });
-    buildCeoReviewContext.mockReturnValue({ role: 'ceo', projectPath: '/test', gsdCommand: 'review-context' });
+    buildCeoReviewContext.mockReturnValue({
+      role: 'ceo',
+      projectPath: '/test',
+      gsdCommand: 'review-context',
+    });
     buildReviewIssueDescription.mockReturnValue('Review description');
-    buildRevisionContext.mockReturnValue({ role: 'discusser', projectPath: '/test', gsdCommand: '/gsd:discuss-phase 1 --auto' });
+    buildRevisionContext.mockReturnValue({
+      role: 'discusser',
+      projectPath: '/test',
+      gsdCommand: '/gsd:discuss-phase 1 --auto',
+    });
     buildRevisionIssueDescription.mockReturnValue('Revision description');
-    classifyError.mockReturnValue({ type: 'fatal', retryable: false, maxRetries: 0, message: 'error' });
+    classifyError.mockReturnValue({
+      type: 'fatal',
+      retryable: false,
+      maxRetries: 0,
+      message: 'error',
+    });
 
     runner = new PipelineRunner(services, config);
   });
@@ -147,9 +197,9 @@ describe('PipelineRunner', () => {
 
       const state = runner.getState();
       expect(state).not.toBeNull();
-      expect(state!.status).toBe('initializing');
-      expect(state!.projectPath).toBe('/test/project');
-      expect(state!.brief).toBe('Build a todo app');
+      expect(state?.status).toBe('initializing');
+      expect(state?.projectPath).toBe('/test/project');
+      expect(state?.brief).toBe('Build a todo app');
       expect(ensureAgentsExist).toHaveBeenCalledOnce();
       expect(spawnAgent).toHaveBeenCalledOnce();
     });
@@ -173,9 +223,16 @@ describe('PipelineRunner', () => {
         phase: 0,
         summary: 'Project initialized',
       };
-      (services.issues.listComments as ReturnType<typeof vi.fn>).mockResolvedValue({
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
         ok: true,
-        value: [{ id: 'c1', body: '---\nGSD_SIGNAL:PROJECT_READY\nphase: 0\nstatus: success\nsummary: done\n---' }],
+        value: [
+          {
+            id: 'c1',
+            body: '---\nGSD_SIGNAL:PROJECT_READY\nphase: 0\nstatus: success\nsummary: done\n---',
+          },
+        ],
       });
       parseSignal.mockReturnValue(projectReadySignal);
 
@@ -187,9 +244,9 @@ describe('PipelineRunner', () => {
       });
 
       const state = runner.getState();
-      expect(state!.status).toBe('running');
-      expect(state!.phases.length).toBeGreaterThan(0);
-      expect(state!.executionPlan).not.toBeNull();
+      expect(state?.status).toBe('running');
+      expect(state?.phases.length).toBeGreaterThan(0);
+      expect(state?.executionPlan).not.toBeNull();
     });
   });
 
@@ -205,7 +262,9 @@ describe('PipelineRunner', () => {
         phase: 0,
         summary: 'Project initialized',
       };
-      (services.issues.listComments as ReturnType<typeof vi.fn>).mockResolvedValue({
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
         ok: true,
         value: [{ id: 'c1', body: 'signal' }],
       });
@@ -229,23 +288,46 @@ describe('PipelineRunner', () => {
       // Simulate DISCUSS_COMPLETE
       const signals: Array<{ signal: GsdSignal; event: PhaseEvent }> = [
         {
-          signal: { type: 'DISCUSS_COMPLETE', phase: firstPhase.phaseNumber, status: 'success', summary: 'done' },
+          signal: {
+            type: 'DISCUSS_COMPLETE',
+            phase: firstPhase.phaseNumber,
+            status: 'success',
+            summary: 'done',
+          },
           event: { type: 'STEP_COMPLETED' },
         },
         {
-          signal: { type: 'APPROVED', phase: firstPhase.phaseNumber, summary: 'approved' },
+          signal: {
+            type: 'APPROVED',
+            phase: firstPhase.phaseNumber,
+            summary: 'approved',
+          },
           event: { type: 'APPROVED' },
         },
         {
-          signal: { type: 'PLAN_COMPLETE', phase: firstPhase.phaseNumber, status: 'success', summary: 'planned' },
+          signal: {
+            type: 'PLAN_COMPLETE',
+            phase: firstPhase.phaseNumber,
+            status: 'success',
+            summary: 'planned',
+          },
           event: { type: 'STEP_COMPLETED' },
         },
         {
-          signal: { type: 'EXECUTE_COMPLETE', phase: firstPhase.phaseNumber, status: 'success', summary: 'done' },
+          signal: {
+            type: 'EXECUTE_COMPLETE',
+            phase: firstPhase.phaseNumber,
+            status: 'success',
+            summary: 'done',
+          },
           event: { type: 'STEP_COMPLETED' },
         },
         {
-          signal: { type: 'VERIFY_COMPLETE', phase: firstPhase.phaseNumber, summary: 'verified' },
+          signal: {
+            type: 'VERIFY_COMPLETE',
+            phase: firstPhase.phaseNumber,
+            summary: 'verified',
+          },
           event: { type: 'STEP_COMPLETED' },
         },
       ];
@@ -253,7 +335,10 @@ describe('PipelineRunner', () => {
       for (const { signal, event } of signals) {
         // Issue a new issueId each time since each agent gets its own issue
         const issueId = `issue-${signal.type.toLowerCase()}`;
-        spawnAgent.mockResolvedValue({ issueId, runId: `run-${signal.type.toLowerCase()}` });
+        spawnAgent.mockResolvedValue({
+          issueId,
+          runId: `run-${signal.type.toLowerCase()}`,
+        });
 
         parseSignal.mockReturnValue(signal);
         mapSignalToPhaseEvent.mockReturnValue(event);
@@ -268,7 +353,9 @@ describe('PipelineRunner', () => {
 
       // After all signals, the first phase should be done
       const updatedState = runner.getState()!;
-      const updatedPhase = updatedState.phases.find((p) => p.phaseNumber === firstPhase.phaseNumber)!;
+      const updatedPhase = updatedState.phases.find(
+        (p) => p.phaseNumber === firstPhase.phaseNumber,
+      )!;
       expect(updatedPhase.status).toBe('done');
     });
   });
@@ -280,8 +367,14 @@ describe('PipelineRunner', () => {
       await runner.start('/test/project', 'Build a todo app');
 
       // PROJECT_READY
-      parseSignal.mockReturnValue({ type: 'PROJECT_READY', phase: 0, summary: 'done' } as GsdSignal);
-      (services.issues.listComments as ReturnType<typeof vi.fn>).mockResolvedValue({
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
         ok: true,
         value: [{ id: 'c1', body: 'signal' }],
       });
@@ -294,9 +387,19 @@ describe('PipelineRunner', () => {
       });
 
       // DISCUSS_COMPLETE -> reviewing
-      spawnAgent.mockResolvedValue({ issueId: 'issue-discuss', runId: 'run-discuss' });
-      parseSignal.mockReturnValue({ type: 'DISCUSS_COMPLETE', phase: 1, status: 'success', summary: 'done' } as GsdSignal);
-      mapSignalToPhaseEvent.mockReturnValue({ type: 'STEP_COMPLETED' } as PhaseEvent);
+      spawnAgent.mockResolvedValue({
+        issueId: 'issue-discuss',
+        runId: 'run-discuss',
+      });
+      parseSignal.mockReturnValue({
+        type: 'DISCUSS_COMPLETE',
+        phase: 1,
+        status: 'success',
+        summary: 'done',
+      } as GsdSignal);
+      mapSignalToPhaseEvent.mockReturnValue({
+        type: 'STEP_COMPLETED',
+      } as PhaseEvent);
 
       await runner.handleAgentCompletion({
         status: 'succeeded',
@@ -314,9 +417,18 @@ describe('PipelineRunner', () => {
       expect(phase.status).toBe('reviewing');
 
       // REVISION_NEEDED -> discussing
-      spawnAgent.mockResolvedValue({ issueId: 'issue-review', runId: 'run-review' });
-      parseSignal.mockReturnValue({ type: 'REVISION_NEEDED', phase: phase.phaseNumber, feedback: 'Missing error handling' } as GsdSignal);
-      mapSignalToPhaseEvent.mockReturnValue({ type: 'REVISION_NEEDED' } as PhaseEvent);
+      spawnAgent.mockResolvedValue({
+        issueId: 'issue-review',
+        runId: 'run-review',
+      });
+      parseSignal.mockReturnValue({
+        type: 'REVISION_NEEDED',
+        phase: phase.phaseNumber,
+        feedback: 'Missing error handling',
+      } as GsdSignal);
+      mapSignalToPhaseEvent.mockReturnValue({
+        type: 'REVISION_NEEDED',
+      } as PhaseEvent);
 
       await runner.handleAgentCompletion({
         status: 'succeeded',
@@ -326,7 +438,9 @@ describe('PipelineRunner', () => {
       });
 
       const stateAfter = runner.getState()!;
-      const updatedPhase = stateAfter.phases.find((p) => p.phaseNumber === phase.phaseNumber)!;
+      const updatedPhase = stateAfter.phases.find(
+        (p) => p.phaseNumber === phase.phaseNumber,
+      )!;
       expect(updatedPhase.status).toBe('discussing');
     });
   });
@@ -341,8 +455,14 @@ describe('PipelineRunner', () => {
       await runner.start('/test/project', 'Build a todo app');
 
       // PROJECT_READY
-      parseSignal.mockReturnValue({ type: 'PROJECT_READY', phase: 0, summary: 'done' } as GsdSignal);
-      (services.issues.listComments as ReturnType<typeof vi.fn>).mockResolvedValue({
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
         ok: true,
         value: [{ id: 'c1', body: 'signal' }],
       });
@@ -354,14 +474,25 @@ describe('PipelineRunner', () => {
         issueId: 'issue-1',
       });
 
-      const firstPhaseNumber = runner.getState()!.phases[0]!.phaseNumber;
+      const firstPhaseNumber = runner.getState()?.phases[0]
+        ?.phaseNumber as number;
 
       // First discussion + revision (revision count: 1)
       for (let i = 0; i < 2; i++) {
         // DISCUSS_COMPLETE
-        spawnAgent.mockResolvedValue({ issueId: `issue-d${i}`, runId: `run-d${i}` });
-        parseSignal.mockReturnValue({ type: 'DISCUSS_COMPLETE', phase: firstPhaseNumber, status: 'success', summary: 'done' } as GsdSignal);
-        mapSignalToPhaseEvent.mockReturnValue({ type: 'STEP_COMPLETED' } as PhaseEvent);
+        spawnAgent.mockResolvedValue({
+          issueId: `issue-d${i}`,
+          runId: `run-d${i}`,
+        });
+        parseSignal.mockReturnValue({
+          type: 'DISCUSS_COMPLETE',
+          phase: firstPhaseNumber,
+          status: 'success',
+          summary: 'done',
+        } as GsdSignal);
+        mapSignalToPhaseEvent.mockReturnValue({
+          type: 'STEP_COMPLETED',
+        } as PhaseEvent);
 
         await runner.handleAgentCompletion({
           status: 'succeeded',
@@ -371,9 +502,18 @@ describe('PipelineRunner', () => {
         });
 
         // REVISION_NEEDED
-        spawnAgent.mockResolvedValue({ issueId: `issue-r${i}`, runId: `run-r${i}` });
-        parseSignal.mockReturnValue({ type: 'REVISION_NEEDED', phase: firstPhaseNumber, feedback: `Feedback ${i}` } as GsdSignal);
-        mapSignalToPhaseEvent.mockReturnValue({ type: 'REVISION_NEEDED' } as PhaseEvent);
+        spawnAgent.mockResolvedValue({
+          issueId: `issue-r${i}`,
+          runId: `run-r${i}`,
+        });
+        parseSignal.mockReturnValue({
+          type: 'REVISION_NEEDED',
+          phase: firstPhaseNumber,
+          feedback: `Feedback ${i}`,
+        } as GsdSignal);
+        mapSignalToPhaseEvent.mockReturnValue({
+          type: 'REVISION_NEEDED',
+        } as PhaseEvent);
 
         await runner.handleAgentCompletion({
           status: 'succeeded',
@@ -384,8 +524,11 @@ describe('PipelineRunner', () => {
       }
 
       // After 2 REVISION_NEEDED with maxRevisions=1, phase should be failed
-      const updatedPhase = runner.getState()!.phases.find((p) => p.phaseNumber === firstPhaseNumber)!;
-      expect(updatedPhase.status).toBe('failed');
+      const finalState = runner.getState();
+      const updatedPhase = finalState?.phases.find(
+        (p) => p.phaseNumber === firstPhaseNumber,
+      );
+      expect(updatedPhase?.status).toBe('failed');
     });
   });
 
@@ -396,8 +539,14 @@ describe('PipelineRunner', () => {
       await runner.start('/test/project', 'Build a todo app');
 
       // PROJECT_READY
-      parseSignal.mockReturnValue({ type: 'PROJECT_READY', phase: 0, summary: 'done' } as GsdSignal);
-      (services.issues.listComments as ReturnType<typeof vi.fn>).mockResolvedValue({
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
         ok: true,
         value: [{ id: 'c1', body: 'signal' }],
       });
@@ -409,10 +558,14 @@ describe('PipelineRunner', () => {
         issueId: 'issue-1',
       });
 
-      const firstPhaseNumber = runner.getState()!.phases[0]!.phaseNumber;
+      const firstPhaseNumber = runner.getState()?.phases[0]
+        ?.phaseNumber as number;
 
       // Agent fails
-      spawnAgent.mockResolvedValue({ issueId: 'issue-fail', runId: 'run-fail' });
+      spawnAgent.mockResolvedValue({
+        issueId: 'issue-fail',
+        runId: 'run-fail',
+      });
 
       await runner.handleAgentCompletion({
         status: 'failed',
@@ -422,13 +575,22 @@ describe('PipelineRunner', () => {
       });
 
       // With transient error, phase should retry
-      classifyError.mockReturnValue({ type: 'transient', retryable: true, maxRetries: 3, message: 'ETIMEDOUT' });
+      classifyError.mockReturnValue({
+        type: 'transient',
+        retryable: true,
+        maxRetries: 3,
+        message: 'ETIMEDOUT',
+      });
 
       // The phase should go to failed then get retried back to discussing
       const state = runner.getState()!;
-      const phase = state.phases.find((p) => p.phaseNumber === firstPhaseNumber)!;
+      const phase = state.phases.find(
+        (p) => p.phaseNumber === firstPhaseNumber,
+      )!;
       // After retry, phase should be back in discussing (pending -> discussing via DEPENDENCIES_MET)
-      expect(phase.status === 'discussing' || phase.status === 'pending').toBe(true);
+      expect(phase.status === 'discussing' || phase.status === 'pending').toBe(
+        true,
+      );
     });
   });
 
@@ -439,8 +601,14 @@ describe('PipelineRunner', () => {
       await runner.start('/test/project', 'Build a todo app');
 
       // PROJECT_READY
-      parseSignal.mockReturnValue({ type: 'PROJECT_READY', phase: 0, summary: 'done' } as GsdSignal);
-      (services.issues.listComments as ReturnType<typeof vi.fn>).mockResolvedValue({
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
         ok: true,
         value: [{ id: 'c1', body: 'signal' }],
       });
@@ -452,30 +620,54 @@ describe('PipelineRunner', () => {
         issueId: 'issue-1',
       });
 
-      const firstPhaseNumber = runner.getState()!.phases[0]!.phaseNumber;
+      const firstPhaseNumber = runner.getState()?.phases[0]
+        ?.phaseNumber as number;
 
       // Advance through discussing -> reviewing -> planning -> executing -> verifying
-      const stepsToVerifying: Array<{ signal: GsdSignal; event: PhaseEvent }> = [
-        {
-          signal: { type: 'DISCUSS_COMPLETE', phase: firstPhaseNumber, status: 'success', summary: 'done' },
-          event: { type: 'STEP_COMPLETED' },
-        },
-        {
-          signal: { type: 'APPROVED', phase: firstPhaseNumber, summary: 'approved' },
-          event: { type: 'APPROVED' },
-        },
-        {
-          signal: { type: 'PLAN_COMPLETE', phase: firstPhaseNumber, status: 'success', summary: 'planned' },
-          event: { type: 'STEP_COMPLETED' },
-        },
-        {
-          signal: { type: 'EXECUTE_COMPLETE', phase: firstPhaseNumber, status: 'success', summary: 'done' },
-          event: { type: 'STEP_COMPLETED' },
-        },
-      ];
+      const stepsToVerifying: Array<{ signal: GsdSignal; event: PhaseEvent }> =
+        [
+          {
+            signal: {
+              type: 'DISCUSS_COMPLETE',
+              phase: firstPhaseNumber,
+              status: 'success',
+              summary: 'done',
+            },
+            event: { type: 'STEP_COMPLETED' },
+          },
+          {
+            signal: {
+              type: 'APPROVED',
+              phase: firstPhaseNumber,
+              summary: 'approved',
+            },
+            event: { type: 'APPROVED' },
+          },
+          {
+            signal: {
+              type: 'PLAN_COMPLETE',
+              phase: firstPhaseNumber,
+              status: 'success',
+              summary: 'planned',
+            },
+            event: { type: 'STEP_COMPLETED' },
+          },
+          {
+            signal: {
+              type: 'EXECUTE_COMPLETE',
+              phase: firstPhaseNumber,
+              status: 'success',
+              summary: 'done',
+            },
+            event: { type: 'STEP_COMPLETED' },
+          },
+        ];
 
       for (const { signal, event } of stepsToVerifying) {
-        spawnAgent.mockResolvedValue({ issueId: `issue-${signal.type}`, runId: `run-${signal.type}` });
+        spawnAgent.mockResolvedValue({
+          issueId: `issue-${signal.type}`,
+          runId: `run-${signal.type}`,
+        });
         parseSignal.mockReturnValue(signal);
         mapSignalToPhaseEvent.mockReturnValue(event);
 
@@ -508,7 +700,9 @@ describe('PipelineRunner', () => {
       });
 
       const state = runner.getState()!;
-      const phase = state.phases.find((p) => p.phaseNumber === firstPhaseNumber)!;
+      const phase = state.phases.find(
+        (p) => p.phaseNumber === firstPhaseNumber,
+      )!;
       // verifying + STEP_FAILED -> executing (per phase-machine transition table)
       expect(phase.status).toBe('executing');
     });
@@ -521,8 +715,14 @@ describe('PipelineRunner', () => {
       await runner.start('/test/project', 'Build a todo app');
 
       // PROJECT_READY
-      parseSignal.mockReturnValue({ type: 'PROJECT_READY', phase: 0, summary: 'done' } as GsdSignal);
-      (services.issues.listComments as ReturnType<typeof vi.fn>).mockResolvedValue({
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
         ok: true,
         value: [{ id: 'c1', body: 'signal' }],
       });
@@ -540,30 +740,56 @@ describe('PipelineRunner', () => {
       for (const phase of state.phases) {
         const signals: Array<{ signal: GsdSignal; event: PhaseEvent }> = [
           {
-            signal: { type: 'DISCUSS_COMPLETE', phase: phase.phaseNumber, status: 'success', summary: 'done' },
+            signal: {
+              type: 'DISCUSS_COMPLETE',
+              phase: phase.phaseNumber,
+              status: 'success',
+              summary: 'done',
+            },
             event: { type: 'STEP_COMPLETED' },
           },
           {
-            signal: { type: 'APPROVED', phase: phase.phaseNumber, summary: 'approved' },
+            signal: {
+              type: 'APPROVED',
+              phase: phase.phaseNumber,
+              summary: 'approved',
+            },
             event: { type: 'APPROVED' },
           },
           {
-            signal: { type: 'PLAN_COMPLETE', phase: phase.phaseNumber, status: 'success', summary: 'planned' },
+            signal: {
+              type: 'PLAN_COMPLETE',
+              phase: phase.phaseNumber,
+              status: 'success',
+              summary: 'planned',
+            },
             event: { type: 'STEP_COMPLETED' },
           },
           {
-            signal: { type: 'EXECUTE_COMPLETE', phase: phase.phaseNumber, status: 'success', summary: 'done' },
+            signal: {
+              type: 'EXECUTE_COMPLETE',
+              phase: phase.phaseNumber,
+              status: 'success',
+              summary: 'done',
+            },
             event: { type: 'STEP_COMPLETED' },
           },
           {
-            signal: { type: 'VERIFY_COMPLETE', phase: phase.phaseNumber, summary: 'verified' },
+            signal: {
+              type: 'VERIFY_COMPLETE',
+              phase: phase.phaseNumber,
+              summary: 'verified',
+            },
             event: { type: 'STEP_COMPLETED' },
           },
         ];
 
         for (const { signal, event } of signals) {
           const issueId = `issue-p${phase.phaseNumber}-${signal.type}`;
-          spawnAgent.mockResolvedValue({ issueId, runId: `run-p${phase.phaseNumber}-${signal.type}` });
+          spawnAgent.mockResolvedValue({
+            issueId,
+            runId: `run-p${phase.phaseNumber}-${signal.type}`,
+          });
           parseSignal.mockReturnValue(signal);
           mapSignalToPhaseEvent.mockReturnValue(event);
 
@@ -590,8 +816,14 @@ describe('PipelineRunner', () => {
       const callOrder: number[] = [];
 
       // PROJECT_READY for first call
-      parseSignal.mockReturnValue({ type: 'PROJECT_READY', phase: 0, summary: 'done' } as GsdSignal);
-      (services.issues.listComments as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockImplementation(async () => {
         callOrder.push(1);
         // Small delay to test serialization
         await new Promise((r) => globalThis.setTimeout(r, 10));
