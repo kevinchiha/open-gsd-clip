@@ -199,7 +199,7 @@ describe('buildIssueDescription', () => {
       };
       const desc = buildIssueDescription(ctx);
       expect(desc).toContain('/projects/my-app');
-      expect(desc).toContain('Phase 3');
+      expect(desc).toContain('**Phase:** 3');
     });
 
     it('should include GSD_SIGNAL template with DISCUSS_COMPLETE', () => {
