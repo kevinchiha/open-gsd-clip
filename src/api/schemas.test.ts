@@ -73,17 +73,17 @@ describe('RetrySchema', () => {
 });
 
 describe('OverrideSchema', () => {
-  it('accepts valid escalation override', () => {
+  it('accepts valid ESC-prefixed escalation ID', () => {
     const result = OverrideSchema.safeParse({
-      escalationId: '550e8400-e29b-41d4-a716-446655440000',
+      escalationId: 'ESC-550e8400-e29b-41d4-a716-446655440000',
       decision: 'proceed with option A',
     });
     expect(result.success).toBe(true);
   });
 
-  it('rejects invalid UUID', () => {
+  it('rejects non-ESC-prefixed ID', () => {
     const result = OverrideSchema.safeParse({
-      escalationId: 'not-a-uuid',
+      escalationId: 'not-an-esc-id',
       decision: 'proceed',
     });
     expect(result.success).toBe(false);
@@ -91,7 +91,7 @@ describe('OverrideSchema', () => {
 
   it('rejects empty decision', () => {
     const result = OverrideSchema.safeParse({
-      escalationId: '550e8400-e29b-41d4-a716-446655440000',
+      escalationId: 'ESC-550e8400-e29b-41d4-a716-446655440000',
       decision: '',
     });
     expect(result.success).toBe(false);

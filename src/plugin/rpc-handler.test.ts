@@ -400,7 +400,7 @@ describe('rpc-handler', () => {
       });
     });
 
-    it('returns INTERNAL_ERROR when handler throws', async () => {
+    it('wraps handler error in ActionResult when handler throws', async () => {
       const mock = createMockRunner();
       mock.start.mockRejectedValue(new Error('spawn failed'));
       const h = createRpcHandler(
@@ -417,10 +417,11 @@ describe('rpc-handler', () => {
         id: 45,
       });
 
+      // The ACTION_HANDLER catches the error and returns { success: false, error: ... }
       expect(response).toMatchObject({
         jsonrpc: '2.0',
         id: 45,
-        error: { code: -32603, message: 'spawn failed' },
+        result: { success: false, error: 'spawn failed' },
       });
     });
   });
@@ -462,25 +463,30 @@ describe('rpc-handler', () => {
         id: 51,
       });
 
+      // Chat parser provides { brief: 'Build me an app' } but gsd.start
+      // also requires projectPath, so schema validation returns an error.
+      // The handler is still called, returning { success: false, error: ... }
       expect(response).toMatchObject({
         jsonrpc: '2.0',
         id: 51,
-        result: { received: true, reply: { success: true } },
+        result: { received: true, reply: { success: false } },
       });
     });
 
-    it('routes "resolve ESC-abc123 option 1" to gsd.override handler', async () => {
+    it('routes "resolve ESC-<uuid> option 1" to gsd.override handler', async () => {
       const mock = createMockRunner();
       const h = createRpcHandler(
         mock as unknown as Parameters<typeof createRpcHandler>[0],
       );
+
+      const escalationId = 'ESC-550e8400-e29b-41d4-a716-446655440000';
 
       const response = await h({
         jsonrpc: '2.0',
         method: 'onEvent',
         params: {
           type: 'chat.message',
-          data: { content: 'resolve ESC-abc123 option 1' },
+          data: { content: `resolve ${escalationId} option 1` },
         },
         id: 52,
       });
@@ -491,7 +497,7 @@ describe('rpc-handler', () => {
         result: { received: true, reply: { success: true } },
       });
       expect(mock.resolveEscalation).toHaveBeenCalledWith(
-        'ESC-abc123',
+        escalationId,
         'option 1',
       );
     });

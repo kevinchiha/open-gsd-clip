@@ -1,3 +1,5 @@
+import { ACTION_HANDLERS } from '../api/actions.js';
+import { parseCommand } from '../api/chat-parser.js';
 import type { PipelineRunner } from '../orchestrator/pipeline-runner.js';
 import { createChildLogger } from '../shared/logger.js';
 import {
@@ -121,6 +123,44 @@ function buildMethods(
         return success({ received: true, status: run.status }, id);
       }
 
+      // Handle chat.message events for Discord command routing
+      if (event.type === 'chat.message') {
+        const msg = event.data as { content?: string; channelId?: string; userId?: string } | undefined;
+        const content = msg?.content?.trim();
+
+        if (!content) {
+          return success({ received: true }, id);
+        }
+
+        if (!orchestrator) {
+          return success({ received: true, reply: 'GSD pipeline not initialized. Please wait for startup.' }, id);
+        }
+
+        const command = parseCommand(content);
+        if (command) {
+          const actionHandler = ACTION_HANDLERS[command.action];
+          if (actionHandler) {
+            try {
+              const result = await actionHandler(command.params, orchestrator);
+              return success({ received: true, reply: result }, id);
+            } catch (err) {
+              return success({ received: true, reply: { success: false, error: (err as Error).message } }, id);
+            }
+          }
+        }
+
+        // Unrecognized command -- return help
+        return success({
+          received: true,
+          reply: {
+            success: true,
+            data: {
+              message: 'Available commands: start <brief>, status, retry <phase>, pause, resume, resolve <ESC-id> <decision>',
+            },
+          },
+        }, id);
+      }
+
       // Default: acknowledge unknown event types
       return success({ received: true }, id);
     },
@@ -129,8 +169,28 @@ function buildMethods(
       return success({ status: 'not_implemented' }, id);
     },
 
-    async executeAction(_params, id) {
-      return success({ status: 'not_implemented' }, id);
+    async executeAction(params, id) {
+      const { action, args } = (params as { action: string; args: unknown } | { action?: undefined; args?: undefined }) ?? {};
+
+      if (!action) {
+        return error(RPC_ERRORS.INVALID_PARAMS, 'Missing action field', id);
+      }
+
+      if (!orchestrator) {
+        return error(RPC_ERRORS.INTERNAL_ERROR, 'Pipeline runner not initialized', id);
+      }
+
+      const handler = ACTION_HANDLERS[action];
+      if (!handler) {
+        return error(RPC_ERRORS.METHOD_NOT_FOUND, `Unknown action: ${action}`, id);
+      }
+
+      try {
+        const result = await handler(args, orchestrator);
+        return success(result, id);
+      } catch (err) {
+        return error(RPC_ERRORS.INTERNAL_ERROR, (err as Error).message, id);
+      }
     },
 
     async registerTools(_params, id) {

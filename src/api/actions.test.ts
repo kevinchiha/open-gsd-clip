@@ -150,7 +150,7 @@ describe('ACTION_HANDLERS', () => {
 
   describe('gsd.override', () => {
     it('calls runner.resolveEscalation with valid params', async () => {
-      const id = '550e8400-e29b-41d4-a716-446655440000';
+      const id = 'ESC-550e8400-e29b-41d4-a716-446655440000';
       const result = await ACTION_HANDLERS['gsd.override']!(
         { escalationId: id, decision: 'option 2' },
         runner,
@@ -161,7 +161,7 @@ describe('ACTION_HANDLERS', () => {
 
     it('returns error for invalid params', async () => {
       const result = await ACTION_HANDLERS['gsd.override']!(
-        { escalationId: 'not-a-uuid', decision: 'option 2' },
+        { escalationId: 'not-an-esc-id', decision: 'option 2' },
         runner,
       );
       expect(result.success).toBe(false);
@@ -171,7 +171,7 @@ describe('ACTION_HANDLERS', () => {
       (runner.resolveEscalation as ReturnType<typeof vi.fn>).mockRejectedValue(
         new Error('Escalation not found'),
       );
-      const id = '550e8400-e29b-41d4-a716-446655440000';
+      const id = 'ESC-550e8400-e29b-41d4-a716-446655440000';
       const result = await ACTION_HANDLERS['gsd.override']!(
         { escalationId: id, decision: 'test' },
         runner,

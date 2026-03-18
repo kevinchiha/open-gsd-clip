@@ -30,7 +30,13 @@ export const RetrySchema = z.object({
  * Requires a valid UUID escalation ID and a non-empty decision string.
  */
 export const OverrideSchema = z.object({
-  escalationId: z.string().uuid(),
+  escalationId: z
+    .string()
+    .min(1)
+    .refine(
+      (val) => /^ESC-[\w-]+$/.test(val),
+      { message: 'escalationId must match ESC-<id> format' },
+    ),
   decision: z.string().min(1),
 });
 
