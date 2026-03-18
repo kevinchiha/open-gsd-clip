@@ -45,6 +45,46 @@ vi.mock('./audit-log.js', () => ({
   })),
 }));
 
+vi.mock('./worktree-manager.js', () => ({
+  WorktreeManager: vi.fn().mockImplementation(() => ({
+    createWorktree: vi.fn().mockImplementation(async (phaseNumber: number) => ({
+      phaseNumber,
+      branchName: `gsd/phase-${phaseNumber}`,
+      worktreePath: `/worktree/phase-${phaseNumber}`,
+    })),
+    mergePhase: vi.fn().mockResolvedValue(undefined),
+    removeWorktree: vi.fn().mockResolvedValue(undefined),
+    getWorkingDirectory: vi.fn(
+      (phaseNumber: number) => `/worktree/phase-${phaseNumber}`,
+    ),
+    hasParallelPhases: vi.fn().mockReturnValue(false),
+    pruneStaleWorktrees: vi.fn().mockResolvedValue(undefined),
+    cleanupAll: vi.fn().mockResolvedValue(undefined),
+  })),
+}));
+
+vi.mock('./merge-queue.js', () => ({
+  MergeQueue: vi.fn().mockImplementation(
+    (
+      _order: number[],
+      onMerge: (n: number) => Promise<void>,
+    ) => {
+      const instance = {
+        enqueue: vi.fn(async (n: number) => {
+          await onMerge(n);
+        }),
+        markFailed: vi.fn().mockResolvedValue(undefined),
+        isComplete: vi.fn().mockReturnValue(false),
+      };
+      return instance;
+    },
+  ),
+}));
+
+vi.mock('../pipeline/resolver.js', () => ({
+  buildExecutionPlan: vi.fn(),
+}));
+
 // Suppress logger output in tests
 vi.mock('../shared/logger.js', () => ({
   createChildLogger: () => ({
@@ -130,6 +170,7 @@ describe('PipelineRunner', () => {
   let buildReviewIssueDescription: ReturnType<typeof vi.fn>;
   let buildRevisionContext: ReturnType<typeof vi.fn>;
   let buildRevisionIssueDescription: ReturnType<typeof vi.fn>;
+  let buildExecutionPlan: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -143,6 +184,7 @@ describe('PipelineRunner', () => {
     const parserMod = await import('../signals/parser.js');
     const errorMod = await import('./error-handler.js');
     const qgMod = await import('./quality-gate.js');
+    const resolverMod = await import('../pipeline/resolver.js');
 
     ensureAgentsExist = factoryMod.ensureAgentsExist as ReturnType<
       typeof vi.fn
@@ -163,6 +205,18 @@ describe('PipelineRunner', () => {
     >;
     buildRevisionIssueDescription =
       qgMod.buildRevisionIssueDescription as ReturnType<typeof vi.fn>;
+    buildExecutionPlan = resolverMod.buildExecutionPlan as ReturnType<
+      typeof vi.fn
+    >;
+
+    // Default mock: sequential 6-phase plan (matches Phase 4 behavior)
+    buildExecutionPlan.mockReturnValue({
+      ok: true,
+      value: {
+        groups: [[1], [2], [3], [4], [5], [6]],
+        phaseOrder: [1, 2, 3, 4, 5, 6],
+      },
+    });
 
     // Default mock implementations
     ensureAgentsExist.mockResolvedValue(createMockAgents());
@@ -851,6 +905,370 @@ describe('PipelineRunner', () => {
       // Events should have been serialized (1,2 then 1,2 -- not interleaved)
       expect(callOrder[0]).toBe(1);
       expect(callOrder[1]).toBe(2);
+    });
+  });
+
+  // ── 10. Parallel group execution ────────────────────────────────
+
+  describe('parallel group execution', () => {
+    /**
+     * Set up a running pipeline with parallel groups: [[1, 3], [2]].
+     * Phase 1 and 3 are independent, phase 2 depends on both.
+     */
+    async function setupParallelPipeline() {
+      // Override resolver to return parallel groups
+      buildExecutionPlan.mockReturnValue({
+        ok: true,
+        value: {
+          groups: [[1, 3], [2]],
+          phaseOrder: [1, 3, 2],
+        },
+      });
+
+      await runner.start('/test/project', 'Build a todo app');
+
+      // PROJECT_READY
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        ok: true,
+        value: [{ id: 'c1', body: 'signal' }],
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'ceo-agent-id',
+        runId: 'run-1',
+        issueId: 'issue-1',
+      });
+    }
+
+    it('starts all phases in first group simultaneously', async () => {
+      await setupParallelPipeline();
+
+      const state = runner.getState()!;
+      const phase1 = state.phases.find((p) => p.phaseNumber === 1)!;
+      const phase2 = state.phases.find((p) => p.phaseNumber === 2)!;
+      const phase3 = state.phases.find((p) => p.phaseNumber === 3)!;
+
+      // Phase 1 and 3 should both be started (discussing)
+      expect(phase1.status).toBe('discussing');
+      expect(phase3.status).toBe('discussing');
+      // Phase 2 depends on both, should remain pending
+      expect(phase2.status).toBe('pending');
+    });
+  });
+
+  // ── 11. Dependent phase waits ──────────────────────────────────
+
+  describe('dependent phase waits', () => {
+    it('does not start dependent phase until all dependencies complete', async () => {
+      // groups: [[1, 3], [2]] with phase 2 depending on 1 and 3
+      buildExecutionPlan.mockReturnValue({
+        ok: true,
+        value: {
+          groups: [[1, 3], [2]],
+          phaseOrder: [1, 3, 2],
+        },
+      });
+
+      await runner.start('/test/project', 'Build a todo app');
+
+      // PROJECT_READY
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        ok: true,
+        value: [{ id: 'c1', body: 'signal' }],
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'ceo-agent-id',
+        runId: 'run-1',
+        issueId: 'issue-1',
+      });
+
+      // Complete phase 1 through full cycle
+      const phaseSignals: Array<{ signal: GsdSignal; event: PhaseEvent }> = [
+        {
+          signal: { type: 'DISCUSS_COMPLETE', phase: 1, status: 'success', summary: 'done' },
+          event: { type: 'STEP_COMPLETED' },
+        },
+        {
+          signal: { type: 'APPROVED', phase: 1, summary: 'approved' },
+          event: { type: 'APPROVED' },
+        },
+        {
+          signal: { type: 'PLAN_COMPLETE', phase: 1, status: 'success', summary: 'planned' },
+          event: { type: 'STEP_COMPLETED' },
+        },
+        {
+          signal: { type: 'EXECUTE_COMPLETE', phase: 1, status: 'success', summary: 'done' },
+          event: { type: 'STEP_COMPLETED' },
+        },
+        {
+          signal: { type: 'VERIFY_COMPLETE', phase: 1, summary: 'verified' },
+          event: { type: 'STEP_COMPLETED' },
+        },
+      ];
+
+      for (const { signal, event } of phaseSignals) {
+        const issueId = `issue-p1-${signal.type}`;
+        spawnAgent.mockResolvedValue({ issueId, runId: `run-p1-${signal.type}` });
+        parseSignal.mockReturnValue(signal);
+        mapSignalToPhaseEvent.mockReturnValue(event);
+
+        await runner.handleAgentCompletion({
+          status: 'succeeded',
+          agentId: 'some-agent',
+          runId: `run-p1-${signal.type}`,
+          issueId,
+        });
+      }
+
+      // Phase 1 done, but phase 3 still running -> phase 2 should be pending
+      const state = runner.getState()!;
+      const phase1 = state.phases.find((p) => p.phaseNumber === 1)!;
+      const phase2 = state.phases.find((p) => p.phaseNumber === 2)!;
+      const phase3 = state.phases.find((p) => p.phaseNumber === 3)!;
+
+      expect(phase1.status).toBe('done');
+      expect(phase3.status).toBe('discussing'); // still running
+      expect(phase2.status).toBe('pending'); // blocked on phase 3
+    });
+  });
+
+  // ── 12. Worktree path used for agent spawn ────────────────────
+
+  describe('worktree path used for agent spawn', () => {
+    it('passes worktree path as projectPath in agent spawn', async () => {
+      // Use parallel groups to ensure worktrees are created
+      buildExecutionPlan.mockReturnValue({
+        ok: true,
+        value: {
+          groups: [[1, 3], [2]],
+          phaseOrder: [1, 3, 2],
+        },
+      });
+
+      await runner.start('/test/project', 'Build a todo app');
+
+      // PROJECT_READY
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        ok: true,
+        value: [{ id: 'c1', body: 'signal' }],
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'ceo-agent-id',
+        runId: 'run-1',
+        issueId: 'issue-1',
+      });
+
+      // spawnAgent should have been called with worktree paths for phases 1 and 3
+      const spawnCalls = spawnAgent.mock.calls;
+      // Find the discusser spawn calls (after CEO spawn)
+      const discusserCalls = spawnCalls.filter(
+        (call: unknown[]) =>
+          (call[3] as { role: string }).role === 'discusser',
+      );
+
+      // At least one should use a worktree path
+      const worktreePaths = discusserCalls.map(
+        (call: unknown[]) => (call[3] as { projectPath: string }).projectPath,
+      );
+      expect(worktreePaths).toContain('/worktree/phase-1');
+      expect(worktreePaths).toContain('/worktree/phase-3');
+    });
+  });
+
+  // ── 13. Merge queue receives completed phases ─────────────────
+
+  describe('merge queue receives completed phases', () => {
+    it('enqueues completed phase in MergeQueue', async () => {
+      // Use parallel groups
+      buildExecutionPlan.mockReturnValue({
+        ok: true,
+        value: {
+          groups: [[1, 3], [2]],
+          phaseOrder: [1, 3, 2],
+        },
+      });
+
+      await runner.start('/test/project', 'Build a todo app');
+
+      // PROJECT_READY
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        ok: true,
+        value: [{ id: 'c1', body: 'signal' }],
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'ceo-agent-id',
+        runId: 'run-1',
+        issueId: 'issue-1',
+      });
+
+      // Complete phase 1 through full cycle
+      const phaseSignals: Array<{ signal: GsdSignal; event: PhaseEvent }> = [
+        { signal: { type: 'DISCUSS_COMPLETE', phase: 1, status: 'success', summary: 'done' }, event: { type: 'STEP_COMPLETED' } },
+        { signal: { type: 'APPROVED', phase: 1, summary: 'approved' }, event: { type: 'APPROVED' } },
+        { signal: { type: 'PLAN_COMPLETE', phase: 1, status: 'success', summary: 'planned' }, event: { type: 'STEP_COMPLETED' } },
+        { signal: { type: 'EXECUTE_COMPLETE', phase: 1, status: 'success', summary: 'done' }, event: { type: 'STEP_COMPLETED' } },
+        { signal: { type: 'VERIFY_COMPLETE', phase: 1, summary: 'verified' }, event: { type: 'STEP_COMPLETED' } },
+      ];
+
+      for (const { signal, event } of phaseSignals) {
+        const issueId = `issue-p1-${signal.type}`;
+        spawnAgent.mockResolvedValue({ issueId, runId: `run-p1-${signal.type}` });
+        parseSignal.mockReturnValue(signal);
+        mapSignalToPhaseEvent.mockReturnValue(event);
+
+        await runner.handleAgentCompletion({
+          status: 'succeeded',
+          agentId: 'some-agent',
+          runId: `run-p1-${signal.type}`,
+          issueId,
+        });
+      }
+
+      // Get MergeQueue instance to verify enqueue was called
+      const { MergeQueue } = await import('./merge-queue.js');
+      const mqConstructor = MergeQueue as ReturnType<typeof vi.fn>;
+      const mqInstance = mqConstructor.mock.results[0]?.value;
+
+      expect(mqInstance.enqueue).toHaveBeenCalledWith(1);
+    });
+  });
+
+  // ── 14. Failed phase marked in merge queue ─────────────────────
+
+  describe('failed phase marked in merge queue', () => {
+    it('calls MergeQueue.markFailed when phase fails with fatal error', async () => {
+      buildExecutionPlan.mockReturnValue({
+        ok: true,
+        value: {
+          groups: [[1, 3], [2]],
+          phaseOrder: [1, 3, 2],
+        },
+      });
+
+      await runner.start('/test/project', 'Build a todo app');
+
+      // PROJECT_READY
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        ok: true,
+        value: [{ id: 'c1', body: 'signal' }],
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'ceo-agent-id',
+        runId: 'run-1',
+        issueId: 'issue-1',
+      });
+
+      // Phase 1 agent fails
+      classifyError.mockReturnValue({
+        type: 'fatal',
+        retryable: false,
+        maxRetries: 0,
+        message: 'fatal error',
+      });
+
+      spawnAgent.mockResolvedValue({
+        issueId: 'issue-p1-discuss',
+        runId: 'run-p1-discuss',
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'failed',
+        agentId: 'discusser-agent-id',
+        runId: 'run-p1-discuss',
+        issueId: 'issue-p1-discuss',
+      });
+
+      // Verify markFailed was called on MergeQueue
+      const { MergeQueue } = await import('./merge-queue.js');
+      const mqConstructor = MergeQueue as ReturnType<typeof vi.fn>;
+      const mqInstance = mqConstructor.mock.results[0]?.value;
+
+      expect(mqInstance.markFailed).toHaveBeenCalledWith(1);
+    });
+  });
+
+  // ── 15. Sequential plan backward compatible ────────────────────
+
+  describe('sequential plan backward compatible', () => {
+    it('executes phases one at a time with groups of size 1', async () => {
+      // Default mock already returns sequential [[1],[2],[3],[4],[5],[6]]
+      await runner.start('/test/project', 'Build a todo app');
+
+      // PROJECT_READY
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        ok: true,
+        value: [{ id: 'c1', body: 'signal' }],
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'ceo-agent-id',
+        runId: 'run-1',
+        issueId: 'issue-1',
+      });
+
+      const state = runner.getState()!;
+
+      // Only phase 1 should be discussing, all others pending
+      const phase1 = state.phases.find((p) => p.phaseNumber === 1)!;
+      expect(phase1.status).toBe('discussing');
+
+      for (const phase of state.phases) {
+        if (phase.phaseNumber !== 1) {
+          expect(phase.status).toBe('pending');
+        }
+      }
     });
   });
 });
