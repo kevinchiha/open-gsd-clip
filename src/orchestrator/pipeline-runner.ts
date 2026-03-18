@@ -53,7 +53,6 @@ import { SerialEventQueue } from './event-queue.js';
 import { HealthMonitor } from './health-monitor.js';
 import { MergeQueue } from './merge-queue.js';
 import {
-  buildReviewIssueDescription,
   buildRevisionIssueDescription,
 } from './quality-gate.js';
 import { TokenTracker } from './token-tracker.js';
@@ -692,10 +691,14 @@ export class PipelineRunner {
 
     switch (phase.status) {
       case 'discussing':
-        await this.spawnDiscusser(phaseNumber);
+        // Skip interactive discussion in autonomous mode — advance directly
+        log.info({ phaseNumber }, 'Autonomous mode: skipping discuss, advancing to planning');
+        await this.handlePhaseEvent(phaseNumber, { type: 'STEP_COMPLETED' });
         break;
       case 'reviewing':
-        await this.spawnCeoReview(phaseNumber);
+        // Skip CEO review in autonomous mode — advance directly
+        log.info({ phaseNumber }, 'Autonomous mode: skipping review, advancing to planning');
+        await this.handlePhaseEvent(phaseNumber, { type: 'APPROVED' });
         break;
       case 'planning':
         await this.spawnPlanner(phaseNumber);
@@ -976,85 +979,8 @@ export class PipelineRunner {
 
   // ── Private: Agent spawning ─────────────────────────────────────
 
-  private async spawnDiscusser(phaseNumber: number): Promise<void> {
-    if (!this.state || !this.agents) return;
-
-    const agentId = this.agents.discusser.agentId;
-    const projectPath =
-      this.worktreeManager?.getWorkingDirectory(phaseNumber) ??
-      this.state.projectPath;
-    const spawn = await retryWithBackoff(
-      () =>
-        spawnAgent(this.services, this.companyId, agentId, {
-          role: 'discusser',
-          projectPath,
-          phaseNumber,
-          gsdCommand: `/gsd:discuss-phase ${phaseNumber} --auto`,
-        }),
-      this.config.retry,
-    );
-
-    await this.setAgentOnPhase(phaseNumber, spawn.issueId, spawn.runId, agentId);
-  }
-
-  private async spawnCeoReview(phaseNumber: number): Promise<void> {
-    if (!this.state || !this.agents) return;
-
-    // Check revision count -- if over limit, fail
-    const revCount = this.revisionCounts.get(phaseNumber) ?? 0;
-    if (revCount > this.config.maxRevisions) {
-      await this.handlePhaseEvent(phaseNumber, {
-        type: 'STEP_FAILED',
-        errorType: 'fatal',
-        message: `Revision limit exceeded (${revCount}/${this.config.maxRevisions})`,
-      });
-      return;
-    }
-
-    const projectPath =
-      this.worktreeManager?.getWorkingDirectory(phaseNumber) ??
-      this.state.projectPath;
-    const paddedPhase = String(phaseNumber).padStart(2, '0');
-    const contextMdPath = `.planning/phases/${paddedPhase}-*/XX-CONTEXT.md`;
-
-    const description = buildReviewIssueDescription(
-      projectPath,
-      phaseNumber,
-      contextMdPath,
-    );
-
-    // Create issue with custom description (not standard spawnAgent)
-    const issueResult = await this.services.issues.create({
-      companyId: this.companyId,
-      title: `CEO: Review phase ${phaseNumber} context`,
-      description,
-      status: 'todo',
-      priority: 'high',
-      assigneeAgentId: this.agents.ceo.agentId,
-      executionWorkspaceSettings: { mode: 'isolated_workspace' },
-    });
-
-    if (!issueResult.ok) {
-      log.error({ phaseNumber }, 'Failed to create CEO review issue');
-      return;
-    }
-
-    const issueId = issueResult.value.id;
-
-    const invokeResult = await this.services.agents.invoke({
-      companyId: this.companyId,
-      agentId: this.agents.ceo.agentId,
-      reason: `GSD CEO review for phase ${phaseNumber}`,
-      prompt: `You have a new task assigned. Issue ID: ${issueId}. Check your assigned issues and complete the task.`,
-    });
-
-    if (!invokeResult.ok) {
-      log.error({ phaseNumber }, 'Failed to invoke CEO for review');
-      return;
-    }
-
-    await this.setAgentOnPhase(phaseNumber, issueId, invokeResult.value.runId, this.agents.ceo.agentId);
-  }
+  // spawnDiscusser and spawnCeoReview removed — autonomous mode skips
+  // interactive discussion and CEO review steps, advancing directly to planning.
 
   private async spawnPlanner(phaseNumber: number): Promise<void> {
     if (!this.state || !this.agents) return;
