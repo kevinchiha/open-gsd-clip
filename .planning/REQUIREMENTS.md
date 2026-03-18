@@ -20,13 +20,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Agent System
 
-- [ ] **AGNT-01**: CEO agent runs /gsd:new-project --auto with the user's brief, handling all GSD interactive prompts autonomously
-- [ ] **AGNT-02**: Discusser agent runs /gsd:discuss-phase N --auto for each phase, producing CONTEXT.md
-- [ ] **AGNT-03**: Planner agent runs /gsd:plan-phase N for each phase, producing PLAN.md files
-- [ ] **AGNT-04**: Executor agent runs /gsd:execute-phase N for each phase, implementing code
-- [ ] **AGNT-05**: Verifier agent runs /gsd:verify-work N for each phase, producing VERIFICATION.md
+- [x] **AGNT-01**: CEO agent runs /gsd:new-project --auto with the user's brief, handling all GSD interactive prompts autonomously
+- [x] **AGNT-02**: Discusser agent runs /gsd:discuss-phase N --auto for each phase, producing CONTEXT.md
+- [x] **AGNT-03**: Planner agent runs /gsd:plan-phase N for each phase, producing PLAN.md files
+- [x] **AGNT-04**: Executor agent runs /gsd:execute-phase N for each phase, implementing code
+- [x] **AGNT-05**: Verifier agent runs /gsd:verify-work N for each phase, producing VERIFICATION.md
 - [ ] **AGNT-06**: Agent factory creates Paperclip agent definitions from CLAUDE.md templates with injected context (project path, brief, phase number, GSD config)
-- [ ] **AGNT-07**: Context builder provides each agent type with appropriate environment variables and instructions
+- [x] **AGNT-07**: Context builder provides each agent type with appropriate environment variables and instructions
 - [ ] **AGNT-08**: CEO quality gate reviews CONTEXT.md between discuss and plan, approving or requesting revision
 - [ ] **AGNT-09**: CEO agent can request discussion revision when CONTEXT.md has gaps, triggering re-discussion
 - [ ] **AGNT-10**: CEO decision audit log records every autonomous decision with timestamp, context, options considered, choice made, and reasoning
@@ -117,13 +117,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-06 | Phase 2 | Complete |
 | PIPE-07 | Phase 5 | Pending |
 | PIPE-08 | Phase 4 | Pending |
-| AGNT-01 | Phase 3 | Pending |
-| AGNT-02 | Phase 3 | Pending |
-| AGNT-03 | Phase 3 | Pending |
-| AGNT-04 | Phase 3 | Pending |
-| AGNT-05 | Phase 3 | Pending |
+| AGNT-01 | Phase 3 | Complete |
+| AGNT-02 | Phase 3 | Complete |
+| AGNT-03 | Phase 3 | Complete |
+| AGNT-04 | Phase 3 | Complete |
+| AGNT-05 | Phase 3 | Complete |
 | AGNT-06 | Phase 3 | Pending |
-| AGNT-07 | Phase 3 | Pending |
+| AGNT-07 | Phase 3 | Complete |
 | AGNT-08 | Phase 4 | Pending |
 | AGNT-09 | Phase 4 | Pending |
 | AGNT-10 | Phase 4 | Pending |
