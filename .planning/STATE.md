@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-03-18T11:03:52.092Z"
-last_activity: 2026-03-18 -- Completed 02-02 DAG dependency resolver with Kahn's algorithm
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-03-18T11:10:46.000Z"
+last_activity: 2026-03-18 -- Completed 02-03 serialization schemas and barrel export
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 6
-  percent: 71
+  completed_plans: 7
+  percent: 80
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-18)
 
 ## Current Position
 
-Phase: 2 of 6 (Pipeline State Machine)
-Plan: 2 of 3 in current phase
+Phase: 2 of 6 (Pipeline State Machine) -- COMPLETE
+Plan: 3 of 3 in current phase
 Status: Executing
-Last activity: 2026-03-18 -- Completed 02-02 DAG dependency resolver with Kahn's algorithm
+Last activity: 2026-03-18 -- Completed 02-03 serialization schemas and barrel export
 
-Progress: [███████░░░] 71%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [███████░░░] 71%
 | Phase 01 P03 | 5min | 2 tasks | 9 files |
 | Phase 01 P02 | 8min | 2 tasks | 7 files |
 | Phase 02 P02 | 2min | 1 tasks | 2 files |
+| Phase 02 P03 | 5min | 2 tasks | 4 files |
 | Phase 02 P01 | 7min | 2 tasks | 5 files |
 
 ## Accumulated Context
@@ -79,6 +80,9 @@ Recent decisions affecting current work:
 - [Phase 02]: PhaseInput/ExecutionPlan types defined locally in resolver.ts -- Plan 03 reconciles with types.ts
 - [Phase 02]: Sorted phase numbers within parallel groups for deterministic resolver output
 - [Phase 02]: Missing dependency validation runs before graph construction (fail-fast)
+- [Phase 02]: Zod .strip() on all serialization schemas to silently remove unknown fields
+- [Phase 02]: z.string().nullable() for timestamps to accept all valid ISO formats from Date.toISOString()
+- [Phase 02]: Reconciled resolver.ts local types with types.ts -- single source of truth for PhaseInput/ExecutionPlan
 - [Phase 02]: Pure transition functions (no side effects) for pipeline and phase FSMs -- consumers react to returned state
 - [Phase 02]: Switch-based pipeline FSM for heterogeneous events; data-driven transition table for uniform phase events
 - [Phase 02]: BFS cascade with visited set prevents infinite loops and processes each node exactly once
@@ -95,6 +99,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T11:03:52.091Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-03-18T11:10:46.000Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: None
