@@ -6,11 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  NOTIFICATION_PREFERENCES,
-  type NotificationPreference,
-  shouldNotify,
-} from './preferences.js';
+import { NOTIFICATION_PREFERENCES, shouldNotify } from './preferences.js';
 
 describe('NOTIFICATION_PREFERENCES', () => {
   it('contains all four preference values', () => {
@@ -54,9 +50,7 @@ describe('shouldNotify', () => {
 
   describe('completions_only preference', () => {
     it('allows pipeline_completed', () => {
-      expect(shouldNotify('completions_only', 'pipeline_completed')).toBe(
-        true,
-      );
+      expect(shouldNotify('completions_only', 'pipeline_completed')).toBe(true);
     });
 
     it('allows phase_completed', () => {
