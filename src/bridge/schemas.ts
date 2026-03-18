@@ -60,9 +60,9 @@ export const StateJsonSchema = z.object({
 
 export const FindPhaseSchema = z.object({
   found: z.boolean(),
-  directory: z.string(),
-  phase_number: z.string(),
-  phase_name: z.string(),
+  directory: z.string().nullable(),
+  phase_number: z.string().nullable(),
+  phase_name: z.string().nullable(),
   plans: z.array(z.string()),
   summaries: z.array(z.string()),
 });

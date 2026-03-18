@@ -60,9 +60,9 @@ export interface ProjectState {
 
 export interface PhasePath {
   found: boolean;
-  directory: string;
-  phaseNumber: string;
-  phaseName: string;
+  directory: string | null;
+  phaseNumber: string | null;
+  phaseName: string | null;
   plans: string[];
   summaries: string[];
 }
