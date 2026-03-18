@@ -44,8 +44,8 @@ Requirements for initial release. Each maps to roadmap phases.
 ### OpenClaw Integration
 
 - [ ] **CLAW-01**: User can start a project pipeline by sending a brief via Discord through OpenClaw
-- [ ] **CLAW-02**: Pipeline pushes status updates to Discord at meaningful transitions (phase started, completed, failed, decision made)
-- [ ] **CLAW-03**: CEO escalation decisions are delivered to user via Discord with context and options
+- [x] **CLAW-02**: Pipeline pushes status updates to Discord at meaningful transitions (phase started, completed, failed, decision made)
+- [x] **CLAW-03**: CEO escalation decisions are delivered to user via Discord with context and options
 - [ ] **CLAW-04**: User can respond to CEO escalations via Discord to unblock the pipeline
 - [ ] **CLAW-05**: User can query pipeline status via Discord chat
 - [ ] **CLAW-06**: User can retry failed phases via Discord commands
@@ -63,10 +63,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Observability
 
-- [ ] **OBSV-01**: Cost/token tracking records token usage per agent invocation, aggregated by phase
-- [ ] **OBSV-02**: Phase progress is reported in status updates (e.g., "Phase 3 of 6, planning step")
-- [ ] **OBSV-03**: User can configure notification preferences (all transitions, failures only, completions only, escalations only)
-- [ ] **OBSV-04**: Activity events are posted to Paperclip's activity log for dashboard visibility
+- [x] **OBSV-01**: Cost/token tracking records token usage per agent invocation, aggregated by phase
+- [x] **OBSV-02**: Phase progress is reported in status updates (e.g., "Phase 3 of 6, planning step")
+- [x] **OBSV-03**: User can configure notification preferences (all transitions, failures only, completions only, escalations only)
+- [x] **OBSV-04**: Activity events are posted to Paperclip's activity log for dashboard visibility
 
 ## v2 Requirements
 
@@ -135,8 +135,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXEC-04 | Phase 4 | Complete |
 | EXEC-05 | Phase 4 | Complete |
 | CLAW-01 | Phase 6 | Pending |
-| CLAW-02 | Phase 6 | Pending |
-| CLAW-03 | Phase 6 | Pending |
+| CLAW-02 | Phase 6 | Complete |
+| CLAW-03 | Phase 6 | Complete |
 | CLAW-04 | Phase 6 | Pending |
 | CLAW-05 | Phase 6 | Pending |
 | CLAW-06 | Phase 6 | Pending |
@@ -148,10 +148,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-05 | Phase 6 | Pending |
 | API-06 | Phase 6 | Pending |
 | API-07 | Phase 6 | Pending |
-| OBSV-01 | Phase 6 | Pending |
-| OBSV-02 | Phase 6 | Pending |
-| OBSV-03 | Phase 6 | Pending |
-| OBSV-04 | Phase 6 | Pending |
+| OBSV-01 | Phase 6 | Complete |
+| OBSV-02 | Phase 6 | Complete |
+| OBSV-03 | Phase 6 | Complete |
+| OBSV-04 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: 43 total

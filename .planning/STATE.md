@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 05-02-PLAN.md
-last_updated: "2026-03-18T17:29:50.227Z"
-last_activity: 2026-03-18 -- Completed 05-02 (PipelineRunner parallel refactor)
+status: executing
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-18T18:04:15.475Z"
+last_activity: 2026-03-18 -- Completed 06-01 (Foundation types, schemas, notifications, token tracker)
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 19
-  completed_plans: 16
-  percent: 100
+  completed_plans: 17
+  percent: 89
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Send a project brief via Discord, come back later to a fully built and verified codebase
-**Current focus:** Phase 5 complete. Ready for Phase 6: UX and Polish
+**Current focus:** Phase 6: User-Facing Integration (API schemas, notifications, token tracking)
 
 ## Current Position
 
-Phase: 5 of 6 (Parallel Execution and Merge Strategy) -- COMPLETE
-Plan: 2 of 2 in current phase (05-02 complete, phase done)
-Status: Phase 05 complete, ready for Phase 06
-Last activity: 2026-03-18 -- Completed 05-02 (PipelineRunner parallel refactor)
+Phase: 6 of 6 (User-Facing Integration)
+Plan: 1 of 3 in current phase (06-01 complete)
+Status: Phase 06 in progress
+Last activity: 2026-03-18 -- Completed 06-01 (Foundation types, schemas, notifications, token tracker)
 
-Progress: [██████████] 100%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [██████████] 100%
 | Phase 04 P03 | 3min | 2 tasks | 4 files |
 | Phase 05 P02 | 8min | 2 tasks | 3 files |
 | Phase 05 P01 | 6min | 2 tasks | 4 files |
+| Phase 06 P01 | 5min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -124,6 +125,9 @@ Recent decisions affecting current work:
 - [Phase 05]: derivePhaseInputs: phases in group N depend on all phases in group N-1 (immediate predecessor group)
 - [Phase 05]: Fire-and-forget worktree cleanup in destroy() to preserve sync API signature
 - [Phase 05]: MergeQueue onMerge callback chains mergePhase then removeWorktree for cleanup after merge
+- [Phase 06]: Floating point precision fix for costCents via Math.round to 10 decimal places
+- [Phase 06]: Discriminated union with 9 event types for PipelineNotificationEvent (typed switch exhaustiveness)
+- [Phase 06]: Set-based preference filtering for O(1) event type matching
 
 ### Pending Todos
 
@@ -137,7 +141,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T17:25:01Z
-Stopped at: Completed 05-02-PLAN.md
+Last session: 2026-03-18T18:04:15.473Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
 Next action: Phase 5 complete. Begin Phase 6 (UX and Polish) if applicable.
