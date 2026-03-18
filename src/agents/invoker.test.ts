@@ -3,10 +3,10 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import type { HostServices } from './types.js';
-import type { AgentContext } from './context.js';
-import { spawnAgent, mapSignalToPhaseEvent } from './invoker.js';
 import type { GsdSignal } from '../signals/types.js';
+import type { AgentContext } from './context.js';
+import { mapSignalToPhaseEvent, spawnAgent } from './invoker.js';
+import type { HostServices } from './types.js';
 
 /**
  * Create a mock HostServices for testing.
@@ -100,7 +100,11 @@ describe('mapSignalToPhaseEvent', () => {
   });
 
   it('maps DISCUSS_COMPLETE success to STEP_COMPLETED', () => {
-    const signal: GsdSignal = { type: 'DISCUSS_COMPLETE', phase: 1, status: 'success' };
+    const signal: GsdSignal = {
+      type: 'DISCUSS_COMPLETE',
+      phase: 1,
+      status: 'success',
+    };
     expect(mapSignalToPhaseEvent(signal)).toEqual({ type: 'STEP_COMPLETED' });
   });
 
@@ -119,7 +123,11 @@ describe('mapSignalToPhaseEvent', () => {
   });
 
   it('maps DISCUSS_COMPLETE failure with no summary to default message', () => {
-    const signal: GsdSignal = { type: 'DISCUSS_COMPLETE', phase: 1, status: 'failure' };
+    const signal: GsdSignal = {
+      type: 'DISCUSS_COMPLETE',
+      phase: 1,
+      status: 'failure',
+    };
     expect(mapSignalToPhaseEvent(signal)).toEqual({
       type: 'STEP_FAILED',
       errorType: 'fatal',
@@ -133,12 +141,20 @@ describe('mapSignalToPhaseEvent', () => {
   });
 
   it('maps REVISION_NEEDED to REVISION_NEEDED', () => {
-    const signal: GsdSignal = { type: 'REVISION_NEEDED', phase: 1, feedback: 'Needs work' };
+    const signal: GsdSignal = {
+      type: 'REVISION_NEEDED',
+      phase: 1,
+      feedback: 'Needs work',
+    };
     expect(mapSignalToPhaseEvent(signal)).toEqual({ type: 'REVISION_NEEDED' });
   });
 
   it('maps PLAN_COMPLETE success to STEP_COMPLETED', () => {
-    const signal: GsdSignal = { type: 'PLAN_COMPLETE', phase: 2, status: 'success' };
+    const signal: GsdSignal = {
+      type: 'PLAN_COMPLETE',
+      phase: 2,
+      status: 'success',
+    };
     expect(mapSignalToPhaseEvent(signal)).toEqual({ type: 'STEP_COMPLETED' });
   });
 
@@ -157,7 +173,11 @@ describe('mapSignalToPhaseEvent', () => {
   });
 
   it('maps EXECUTE_COMPLETE success to STEP_COMPLETED', () => {
-    const signal: GsdSignal = { type: 'EXECUTE_COMPLETE', phase: 3, status: 'success' };
+    const signal: GsdSignal = {
+      type: 'EXECUTE_COMPLETE',
+      phase: 3,
+      status: 'success',
+    };
     expect(mapSignalToPhaseEvent(signal)).toEqual({ type: 'STEP_COMPLETED' });
   });
 

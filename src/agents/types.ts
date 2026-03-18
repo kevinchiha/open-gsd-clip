@@ -51,6 +51,7 @@ export interface AgentConfig {
 }
 
 import type { Result } from '../shared/types.js';
+
 export type { Result } from '../shared/types.js';
 
 /**

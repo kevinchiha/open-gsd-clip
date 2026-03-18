@@ -6,15 +6,15 @@
  * rpc-handler.ts) is the reaction layer that detects when agents complete.
  */
 
+import type { ErrorType, PhaseEvent } from '../pipeline/types.js';
 import { createChildLogger } from '../shared/logger.js';
-import type { HostServices } from './types.js';
-import {
-  buildIssueTitle,
-  buildIssueDescription,
-  type AgentContext,
-} from './context.js';
 import type { GsdSignal } from '../signals/types.js';
-import type { PhaseEvent, ErrorType } from '../pipeline/types.js';
+import {
+  type AgentContext,
+  buildIssueDescription,
+  buildIssueTitle,
+} from './context.js';
+import type { HostServices } from './types.js';
 
 const log = createChildLogger('agent-invoker');
 
@@ -62,7 +62,9 @@ export async function spawnAgent(
   });
 
   if (!issueResult.ok) {
-    throw new Error(`Failed to create issue for ${ctx.role}: ${issueResult.error}`);
+    throw new Error(
+      `Failed to create issue for ${ctx.role}: ${issueResult.error}`,
+    );
   }
 
   const issueId = issueResult.value.id;
@@ -77,7 +79,9 @@ export async function spawnAgent(
   });
 
   if (!invokeResult.ok) {
-    throw new Error(`Failed to invoke agent for ${ctx.role}: ${invokeResult.error}`);
+    throw new Error(
+      `Failed to invoke agent for ${ctx.role}: ${invokeResult.error}`,
+    );
   }
 
   const { runId } = invokeResult.value;
