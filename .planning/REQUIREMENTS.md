@@ -27,8 +27,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **AGNT-05**: Verifier agent runs /gsd:verify-work N for each phase, producing VERIFICATION.md
 - [ ] **AGNT-06**: Agent factory creates Paperclip agent definitions from CLAUDE.md templates with injected context (project path, brief, phase number, GSD config)
 - [x] **AGNT-07**: Context builder provides each agent type with appropriate environment variables and instructions
-- [ ] **AGNT-08**: CEO quality gate reviews CONTEXT.md between discuss and plan, approving or requesting revision
-- [ ] **AGNT-09**: CEO agent can request discussion revision when CONTEXT.md has gaps, triggering re-discussion
+- [x] **AGNT-08**: CEO quality gate reviews CONTEXT.md between discuss and plan, approving or requesting revision
+- [x] **AGNT-09**: CEO agent can request discussion revision when CONTEXT.md has gaps, triggering re-discussion
 - [x] **AGNT-10**: CEO decision audit log records every autonomous decision with timestamp, context, options considered, choice made, and reasoning
 - [ ] **AGNT-11**: CEO escalates big architectural or scope decisions to user via Discord and waits for response (non-blocking for other phases)
 - [ ] **AGNT-12**: CEO agent can detect when execution reveals plan problems and trigger re-planning for the affected phase
@@ -124,8 +124,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGNT-05 | Phase 3 | Complete |
 | AGNT-06 | Phase 3 | Pending |
 | AGNT-07 | Phase 3 | Complete |
-| AGNT-08 | Phase 4 | Pending |
-| AGNT-09 | Phase 4 | Pending |
+| AGNT-08 | Phase 4 | Complete |
+| AGNT-09 | Phase 4 | Complete |
 | AGNT-10 | Phase 4 | Complete |
 | AGNT-11 | Phase 6 | Pending |
 | AGNT-12 | Phase 4 | Pending |
