@@ -1267,4 +1267,436 @@ describe('PipelineRunner', () => {
       }
     });
   });
+
+  // ── 16. pause() ─────────────────────────────────────────────────
+
+  describe('pause', () => {
+    async function setupRunning() {
+      await runner.start('/test/project', 'Build a todo app');
+
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        ok: true,
+        value: [{ id: 'c1', body: 'signal' }],
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'ceo-agent-id',
+        runId: 'run-1',
+        issueId: 'issue-1',
+      });
+    }
+
+    it('transitions pipeline to paused', async () => {
+      await setupRunning();
+      expect(runner.getState()?.status).toBe('running');
+
+      await runner.pause();
+
+      expect(runner.getState()?.status).toBe('paused');
+    });
+
+    it('throws if pipeline not started', async () => {
+      await expect(runner.pause()).rejects.toThrow();
+    });
+
+    it('throws if pipeline not in running state', async () => {
+      await runner.start('/test/project', 'Build a todo app');
+      // Pipeline is in 'initializing', not 'running'
+      await expect(runner.pause()).rejects.toThrow();
+    });
+
+    it('calls notificationService.notify with pipeline_paused', async () => {
+      await setupRunning();
+
+      const mockNotify = vi.fn().mockResolvedValue(undefined);
+      runner.setNotificationService({
+        notify: mockNotify,
+      } as any);
+
+      await runner.pause();
+
+      expect(mockNotify).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'pipeline_paused' }),
+      );
+    });
+  });
+
+  // ── 17. resume() ────────────────────────────────────────────────
+
+  describe('resume', () => {
+    async function setupPaused() {
+      await runner.start('/test/project', 'Build a todo app');
+
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        ok: true,
+        value: [{ id: 'c1', body: 'signal' }],
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'ceo-agent-id',
+        runId: 'run-1',
+        issueId: 'issue-1',
+      });
+
+      await runner.pause();
+    }
+
+    it('transitions pipeline back to running', async () => {
+      await setupPaused();
+      expect(runner.getState()?.status).toBe('paused');
+
+      await runner.resume();
+
+      expect(runner.getState()?.status).toBe('running');
+    });
+
+    it('calls notificationService.notify with pipeline_resumed', async () => {
+      await setupPaused();
+
+      const mockNotify = vi.fn().mockResolvedValue(undefined);
+      runner.setNotificationService({
+        notify: mockNotify,
+      } as any);
+
+      await runner.resume();
+
+      expect(mockNotify).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'pipeline_resumed' }),
+      );
+    });
+
+    it('throws if pipeline not started', async () => {
+      await expect(runner.resume()).rejects.toThrow();
+    });
+  });
+
+  // ── 18. retryPhase() ───────────────────────────────────────────
+
+  describe('retryPhase', () => {
+    it('throws if pipeline not started', async () => {
+      await expect(runner.retryPhase(1)).rejects.toThrow(/not started/i);
+    });
+
+    it('throws if phase is not in failed state', async () => {
+      await runner.start('/test/project', 'Build a todo app');
+
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        ok: true,
+        value: [{ id: 'c1', body: 'signal' }],
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'ceo-agent-id',
+        runId: 'run-1',
+        issueId: 'issue-1',
+      });
+
+      // Phase 1 is 'discussing', not 'failed'
+      await expect(runner.retryPhase(1)).rejects.toThrow(/not.*failed/i);
+    });
+  });
+
+  // ── 19. resolveEscalation() ────────────────────────────────────
+
+  describe('resolveEscalation', () => {
+    it('throws for unknown escalation ID', async () => {
+      await runner.start('/test/project', 'Build a todo app');
+
+      await expect(
+        runner.resolveEscalation('ESC-unknown', 'option 1'),
+      ).rejects.toThrow(/not found/i);
+    });
+  });
+
+  // ── 20. DECISION_NEEDED signal handling ────────────────────────
+
+  describe('DECISION_NEEDED signal', () => {
+    async function setupRunningWithPhase() {
+      await runner.start('/test/project', 'Build a todo app');
+
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        ok: true,
+        value: [{ id: 'c1', body: 'signal' }],
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'ceo-agent-id',
+        runId: 'run-1',
+        issueId: 'issue-1',
+      });
+    }
+
+    it('creates escalation record and notifies without advancing phase', async () => {
+      await setupRunningWithPhase();
+
+      const mockNotify = vi.fn().mockResolvedValue(undefined);
+      runner.setNotificationService({
+        notify: mockNotify,
+      } as any);
+
+      // Send DECISION_NEEDED signal
+      const decisionSignal: GsdSignal = {
+        type: 'DECISION_NEEDED',
+        phase: 1,
+        context: 'Need user input on architecture',
+        options: ['Option A', 'Option B'],
+      };
+
+      spawnAgent.mockResolvedValue({
+        issueId: 'issue-decision',
+        runId: 'run-decision',
+      });
+      parseSignal.mockReturnValue(decisionSignal);
+      // mapSignalToPhaseEvent returns null for DECISION_NEEDED per existing behavior
+      mapSignalToPhaseEvent.mockReturnValue(null);
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'discusser-agent-id',
+        runId: 'run-decision',
+        issueId: 'issue-decision',
+      });
+
+      // Escalation should be created
+      const escalations = runner.getPendingEscalations();
+      expect(escalations.length).toBe(1);
+      expect(escalations[0]?.context).toBe(
+        'Need user input on architecture',
+      );
+      expect(escalations[0]?.options).toEqual(['Option A', 'Option B']);
+      expect(escalations[0]?.phaseNumber).toBe(1);
+
+      // Notification should have been called with escalation event
+      expect(mockNotify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'escalation',
+          phaseNumber: 1,
+        }),
+      );
+
+      // Phase should NOT have advanced (still discussing since DECISION_NEEDED
+      // does not trigger a phase transition)
+      const state = runner.getState()!;
+      const phase = state.phases.find((p) => p.phaseNumber === 1)!;
+      expect(phase.status).toBe('discussing');
+    });
+  });
+
+  // ── 21. advancePhase respects paused status ────────────────────
+
+  describe('advancePhase respects paused status', () => {
+    it('does not spawn new agents when pipeline is paused', async () => {
+      await runner.start('/test/project', 'Build a todo app');
+
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        ok: true,
+        value: [{ id: 'c1', body: 'signal' }],
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'ceo-agent-id',
+        runId: 'run-1',
+        issueId: 'issue-1',
+      });
+
+      // Pause the pipeline
+      await runner.pause();
+      expect(runner.getState()?.status).toBe('paused');
+
+      // Record the spawn call count before the completion event
+      const spawnCountBefore = spawnAgent.mock.calls.length;
+
+      // Send a phase completion signal while paused -- the runner should
+      // NOT spawn new agents for newly unblocked phases
+      spawnAgent.mockResolvedValue({
+        issueId: 'issue-discuss-done',
+        runId: 'run-discuss-done',
+      });
+      parseSignal.mockReturnValue({
+        type: 'DISCUSS_COMPLETE',
+        phase: 1,
+        status: 'success',
+        summary: 'done',
+      } as GsdSignal);
+      mapSignalToPhaseEvent.mockReturnValue({
+        type: 'STEP_COMPLETED',
+      } as PhaseEvent);
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'discusser-agent-id',
+        runId: 'run-discuss',
+        issueId: 'issue-1',
+      });
+
+      // No NEW spawn calls should have been made for the CEO review
+      // because the pipeline is paused
+      const spawnCountAfter = spawnAgent.mock.calls.length;
+      expect(spawnCountAfter).toBe(spawnCountBefore);
+    });
+  });
+
+  // ── 22. Notification hooks on key transitions ─────────────────
+
+  describe('notification hooks', () => {
+    async function setupRunningWithNotifications() {
+      const mockNotify = vi.fn().mockResolvedValue(undefined);
+
+      await runner.start('/test/project', 'Build a todo app');
+
+      runner.setNotificationService({
+        notify: mockNotify,
+      } as any);
+
+      parseSignal.mockReturnValue({
+        type: 'PROJECT_READY',
+        phase: 0,
+        summary: 'done',
+      } as GsdSignal);
+      (
+        services.issues.listComments as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
+        ok: true,
+        value: [{ id: 'c1', body: 'signal' }],
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'succeeded',
+        agentId: 'ceo-agent-id',
+        runId: 'run-1',
+        issueId: 'issue-1',
+      });
+
+      return mockNotify;
+    }
+
+    it('notifies on phase_completed', async () => {
+      const mockNotify = await setupRunningWithNotifications();
+
+      const firstPhaseNumber = runner.getState()?.phases[0]?.phaseNumber as number;
+
+      // Complete phase through full cycle
+      const signals: Array<{ signal: GsdSignal; event: PhaseEvent }> = [
+        {
+          signal: { type: 'DISCUSS_COMPLETE', phase: firstPhaseNumber, status: 'success', summary: 'done' },
+          event: { type: 'STEP_COMPLETED' },
+        },
+        {
+          signal: { type: 'APPROVED', phase: firstPhaseNumber, summary: 'approved' },
+          event: { type: 'APPROVED' },
+        },
+        {
+          signal: { type: 'PLAN_COMPLETE', phase: firstPhaseNumber, status: 'success', summary: 'planned' },
+          event: { type: 'STEP_COMPLETED' },
+        },
+        {
+          signal: { type: 'EXECUTE_COMPLETE', phase: firstPhaseNumber, status: 'success', summary: 'done' },
+          event: { type: 'STEP_COMPLETED' },
+        },
+        {
+          signal: { type: 'VERIFY_COMPLETE', phase: firstPhaseNumber, summary: 'verified' },
+          event: { type: 'STEP_COMPLETED' },
+        },
+      ];
+
+      for (const { signal, event } of signals) {
+        const issueId = `issue-${signal.type}`;
+        spawnAgent.mockResolvedValue({ issueId, runId: `run-${signal.type}` });
+        parseSignal.mockReturnValue(signal);
+        mapSignalToPhaseEvent.mockReturnValue(event);
+
+        await runner.handleAgentCompletion({
+          status: 'succeeded',
+          agentId: 'some-agent',
+          runId: `run-${signal.type}`,
+          issueId,
+        });
+      }
+
+      // Check that phase_completed notification was sent
+      expect(mockNotify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'phase_completed',
+          phaseNumber: firstPhaseNumber,
+        }),
+      );
+    });
+
+    it('notifies on phase_failed', async () => {
+      const mockNotify = await setupRunningWithNotifications();
+
+      // Fail phase 1 via agent failure
+      classifyError.mockReturnValue({
+        type: 'fatal',
+        retryable: false,
+        maxRetries: 0,
+        message: 'fatal error',
+      });
+
+      await runner.handleAgentCompletion({
+        status: 'failed',
+        agentId: 'discusser-agent-id',
+        runId: 'run-fail',
+        issueId: 'issue-1',
+      });
+
+      expect(mockNotify).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'phase_failed',
+          phaseNumber: 1,
+        }),
+      );
+    });
+  });
+
+  // ── 23. Token tracking ─────────────────────────────────────────
+
+  describe('token tracking', () => {
+    it('exposes getTokenSummary method', async () => {
+      await runner.start('/test/project', 'Build a todo app');
+
+      const summary = runner.getTokenSummary();
+      expect(Array.isArray(summary)).toBe(true);
+    });
+  });
 });
