@@ -29,7 +29,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **AGNT-07**: Context builder provides each agent type with appropriate environment variables and instructions
 - [ ] **AGNT-08**: CEO quality gate reviews CONTEXT.md between discuss and plan, approving or requesting revision
 - [ ] **AGNT-09**: CEO agent can request discussion revision when CONTEXT.md has gaps, triggering re-discussion
-- [ ] **AGNT-10**: CEO decision audit log records every autonomous decision with timestamp, context, options considered, choice made, and reasoning
+- [x] **AGNT-10**: CEO decision audit log records every autonomous decision with timestamp, context, options considered, choice made, and reasoning
 - [ ] **AGNT-11**: CEO escalates big architectural or scope decisions to user via Discord and waits for response (non-blocking for other phases)
 - [ ] **AGNT-12**: CEO agent can detect when execution reveals plan problems and trigger re-planning for the affected phase
 
@@ -38,7 +38,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **EXEC-01**: Independent phases execute in parallel when roadmap allows
 - [x] **EXEC-02**: Error handler classifies failures into categories (transient, context overflow, test failure, merge conflict, fatal) and applies appropriate recovery strategy
 - [x] **EXEC-03**: Retry manager retries failed operations with exponential backoff and jitter
-- [ ] **EXEC-04**: Stale agent detection identifies hung agents via progress-based health checks (no output for configurable threshold) and respawns them
+- [x] **EXEC-04**: Stale agent detection identifies hung agents via progress-based health checks (no output for configurable threshold) and respawns them
 - [ ] **EXEC-05**: Phase-level retry allows retrying a specific failed phase from a specific step without restarting the entire pipeline
 
 ### OpenClaw Integration
@@ -126,13 +126,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGNT-07 | Phase 3 | Complete |
 | AGNT-08 | Phase 4 | Pending |
 | AGNT-09 | Phase 4 | Pending |
-| AGNT-10 | Phase 4 | Pending |
+| AGNT-10 | Phase 4 | Complete |
 | AGNT-11 | Phase 6 | Pending |
 | AGNT-12 | Phase 4 | Pending |
 | EXEC-01 | Phase 5 | Pending |
 | EXEC-02 | Phase 4 | Complete |
 | EXEC-03 | Phase 4 | Complete |
-| EXEC-04 | Phase 4 | Pending |
+| EXEC-04 | Phase 4 | Complete |
 | EXEC-05 | Phase 4 | Pending |
 | CLAW-01 | Phase 6 | Pending |
 | CLAW-02 | Phase 6 | Pending |
