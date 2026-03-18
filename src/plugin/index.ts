@@ -55,12 +55,12 @@ function createHttpServices(): HostServices {
         });
       },
       createComment: async (params) => {
-        return api('POST', `/companies/${params.companyId}/issues/${params.issueId}/comments`, {
+        return api('POST', `/issues/${params.issueId}/comments`, {
           body: params.body,
         });
       },
       listComments: async (params) => {
-        return api('GET', `/companies/${params.companyId}/issues/${params.issueId}/comments`);
+        return api('GET', `/issues/${params.issueId}/comments`);
       },
     },
   };

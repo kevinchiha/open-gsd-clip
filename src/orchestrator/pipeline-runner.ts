@@ -239,35 +239,51 @@ export class PipelineRunner {
    * The background poller checks all tracked issues every 10s.
    */
   private trackRunForPolling(agentId: string, issueId: string, runId: string): void {
+    log.info({ agentId, issueId, runId }, 'Tracking run for completion polling');
     this.trackedRuns.set(issueId, { agentId, runId });
 
     // Start the background poller if not already running
     if (!this.completionPoller) {
-      const port = process.env.PAPERCLIP_PORT || '3100';
-      this.completionPoller = setInterval(async () => {
-        if (this.trackedRuns.size === 0) return;
+      const pollFn = () => void this.checkTrackedRuns();
+      // Immediate first check after 5s (agent may already be done)
+      setTimeout(pollFn, 5_000);
+      // Then every 10s
+      this.completionPoller = setInterval(pollFn, 10_000);
+    }
+  }
 
-        for (const [issueId, { agentId, runId }] of this.trackedRuns) {
-          try {
-            const res = await fetch(`http://127.0.0.1:${port}/api/agents/${agentId}`);
-            if (!res.ok) continue;
-            const agent = (await res.json()) as { status: string };
+  /**
+   * Check all tracked runs for completion by querying agent status.
+   */
+  private async checkTrackedRuns(): Promise<void> {
+    if (this.trackedRuns.size === 0) return;
 
-            if (agent.status === 'idle') {
-              log.info({ agentId, runId, issueId }, 'Agent completed (detected via polling)');
-              this.trackedRuns.delete(issueId);
-              void this.handleAgentCompletion({
-                status: 'succeeded',
-                agentId,
-                runId,
-                issueId,
-              });
-            }
-          } catch {
-            // Network error — keep polling
-          }
+    const port = process.env.PAPERCLIP_PORT || '3100';
+    log.debug({ trackedCount: this.trackedRuns.size }, 'Polling tracked runs');
+
+    for (const [issueId, { agentId, runId }] of this.trackedRuns) {
+      try {
+        const res = await fetch(`http://127.0.0.1:${port}/api/agents/${agentId}`);
+        if (!res.ok) {
+          log.warn({ agentId, status: res.status }, 'Agent status check failed');
+          continue;
         }
-      }, 10_000);
+        const agent = (await res.json()) as { status: string };
+        log.debug({ agentId, agentStatus: agent.status, issueId }, 'Polled agent status');
+
+        if (agent.status === 'idle') {
+          log.info({ agentId, runId, issueId }, 'Agent completed (detected via polling)');
+          this.trackedRuns.delete(issueId);
+          void this.handleAgentCompletion({
+            status: 'succeeded',
+            agentId,
+            runId,
+            issueId,
+          });
+        }
+      } catch (err) {
+        log.warn({ agentId, error: (err as Error).message }, 'Poll fetch failed');
+      }
     }
   }
 
@@ -978,7 +994,7 @@ export class PipelineRunner {
       this.config.retry,
     );
 
-    await this.setAgentOnPhase(phaseNumber, spawn.issueId, spawn.runId);
+    await this.setAgentOnPhase(phaseNumber, spawn.issueId, spawn.runId, agentId);
   }
 
   private async spawnCeoReview(phaseNumber: number): Promise<void> {
@@ -1015,7 +1031,7 @@ export class PipelineRunner {
       status: 'todo',
       priority: 'high',
       assigneeAgentId: this.agents.ceo.agentId,
-      executionWorkspaceSettings: { mode: 'isolated' },
+      executionWorkspaceSettings: { mode: 'isolated_workspace' },
     });
 
     if (!issueResult.ok) {
@@ -1037,7 +1053,7 @@ export class PipelineRunner {
       return;
     }
 
-    await this.setAgentOnPhase(phaseNumber, issueId, invokeResult.value.runId);
+    await this.setAgentOnPhase(phaseNumber, issueId, invokeResult.value.runId, this.agents.ceo.agentId);
   }
 
   private async spawnPlanner(phaseNumber: number): Promise<void> {
@@ -1058,7 +1074,7 @@ export class PipelineRunner {
       this.config.retry,
     );
 
-    await this.setAgentOnPhase(phaseNumber, spawn.issueId, spawn.runId);
+    await this.setAgentOnPhase(phaseNumber, spawn.issueId, spawn.runId, agentId);
   }
 
   private async spawnExecutor(phaseNumber: number): Promise<void> {
@@ -1079,7 +1095,7 @@ export class PipelineRunner {
       this.config.retry,
     );
 
-    await this.setAgentOnPhase(phaseNumber, spawn.issueId, spawn.runId);
+    await this.setAgentOnPhase(phaseNumber, spawn.issueId, spawn.runId, agentId);
   }
 
   private async spawnVerifier(phaseNumber: number): Promise<void> {
@@ -1100,7 +1116,7 @@ export class PipelineRunner {
       this.config.retry,
     );
 
-    await this.setAgentOnPhase(phaseNumber, spawn.issueId, spawn.runId);
+    await this.setAgentOnPhase(phaseNumber, spawn.issueId, spawn.runId, agentId);
   }
 
   private async spawnRevisionDiscusser(
@@ -1128,7 +1144,7 @@ export class PipelineRunner {
       status: 'todo',
       priority: 'high',
       assigneeAgentId: this.agents.discusser.agentId,
-      executionWorkspaceSettings: { mode: 'isolated' },
+      executionWorkspaceSettings: { mode: 'isolated_workspace' },
     });
 
     if (!issueResult.ok) {
@@ -1150,7 +1166,7 @@ export class PipelineRunner {
       return;
     }
 
-    await this.setAgentOnPhase(phaseNumber, issueId, invokeResult.value.runId);
+    await this.setAgentOnPhase(phaseNumber, issueId, invokeResult.value.runId, this.agents.discusser.agentId);
   }
 
   // ── Private: Escalation / decision handling ─────────────────────

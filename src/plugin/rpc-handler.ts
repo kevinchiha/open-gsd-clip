@@ -209,6 +209,19 @@ function buildMethods(
       }
     },
 
+    async getData(params, id) {
+      const { key } = (params as { key: string }) ?? {};
+      if (key === 'debug') {
+        return success({
+          hasOrchestrator: !!orchestrator,
+          trackedRuns: orchestrator ? Array.from((orchestrator as any).trackedRuns?.entries?.() ?? []) : [],
+          hasPoller: !!(orchestrator as any)?.completionPoller,
+          companyId: (orchestrator as any)?.companyId ?? 'unknown',
+        }, id);
+      }
+      return success({ key, status: 'not_implemented' }, id);
+    },
+
     async registerTools(_params, id) {
       return success({ status: 'not_implemented' }, id);
     },
