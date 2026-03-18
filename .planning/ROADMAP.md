@@ -97,11 +97,11 @@ Plans:
   1. Independent phases (no unmet dependency) execute in parallel, each in its own git worktree
   2. Parallel phase results are merged into the main branch in roadmap order regardless of completion order
   3. A pipeline with mixed independent and dependent phases correctly parallelizes the independent ones and sequences the dependent ones
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md — WorktreeManager (git worktree lifecycle) and MergeQueue (ordered merge with skip-on-failure)
+- [ ] 05-02-PLAN.md — PipelineRunner parallel refactor (group dispatch, worktree integration, barrel export update)
 
 ### Phase 6: User-Facing Integration
 **Goal**: Users interact with the full pipeline through Discord via OpenClaw (start projects, get status, approve escalations, retry failures, pause/resume) backed by REST API endpoints and observability
@@ -131,5 +131,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 2. Pipeline State Machine | 3/3 | Complete    | 2026-03-18 |
 | 3. Agent Spawning Infrastructure | 0/3 | Planned | - |
 | 4. Sequential Pipeline Execution | 0/4 | Planned | - |
-| 5. Parallel Execution and Merge Strategy | 0/0 | Not started | - |
+| 5. Parallel Execution and Merge Strategy | 0/2 | Planned | - |
 | 6. User-Facing Integration | 0/0 | Not started | - |
