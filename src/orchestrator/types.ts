@@ -89,6 +89,23 @@ export interface OrchestratorConfig {
   stepTimeouts: Partial<Record<PhaseStatus, number>>;
 }
 
+// ── Escalation Record ─────────────────────────────────────────────
+
+/**
+ * Record of a CEO-to-user escalation requiring human decision.
+ * Created when the CEO agent cannot resolve a quality gate failure
+ * within the allowed revision limit.
+ */
+export interface EscalationRecord {
+  id: string;
+  phaseNumber: number;
+  context: string;
+  options: string[];
+  createdAt: string;
+  resolvedAt: string | null;
+  resolution: string | null;
+}
+
 export const DEFAULT_CONFIG: OrchestratorConfig = {
   model: 'claude-sonnet-4-6',
   companyId: '',
