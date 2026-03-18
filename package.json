@@ -1,0 +1,37 @@
+{
+  "name": "@open-gsd/clip",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Paperclip plugin that automates the full GSD development pipeline via agent orchestration",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/plugin/index.ts",
+    "test": "vitest run --reporter=verbose",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check .",
+    "lint:fix": "biome check --fix .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@paperclipai/shared": "^0.3.0",
+    "execa": "^9.6.0",
+    "js-yaml": "^4.0.0",
+    "pino": "^9.0.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "@types/js-yaml": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "pino-pretty": "^13.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "~5.8.0",
+    "vitest": "^3.0.0"
+  }
+}
