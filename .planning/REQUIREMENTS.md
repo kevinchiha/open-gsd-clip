@@ -10,13 +10,13 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Pipeline Core
 
 - [ ] **PIPE-01**: Plugin registers with Paperclip via definePlugin() and responds to health checks
-- [ ] **PIPE-02**: Pipeline state machine tracks phase steps (idle → discussing → planning → executing → verifying → done/failed) with validated transitions
+- [ ] **PIPE-02**: Pipeline state machine tracks phase steps (idle -> discussing -> planning -> executing -> verifying -> done/failed) with validated transitions
 - [ ] **PIPE-03**: Pipeline can be started with a project brief and target project path
 - [ ] **PIPE-04**: gsd-tools.cjs bridge parses roadmap phases, dependencies, status, and plan indices via typed wrapper
 - [ ] **PIPE-05**: Signal parser extracts GSD_SIGNAL structured data from Paperclip issue comments
 - [ ] **PIPE-06**: Phase dependency resolver determines which phases can run in parallel vs must run sequentially based on roadmap data
 - [ ] **PIPE-07**: Sequential merge strategy ensures parallel phases commit results in roadmap order without git conflicts
-- [ ] **PIPE-08**: Pipeline executes all phases end-to-end (discuss → plan → execute → verify per phase) without human intervention
+- [ ] **PIPE-08**: Pipeline executes all phases end-to-end (discuss -> plan -> execute -> verify per phase) without human intervention
 
 ### Agent System
 
@@ -93,11 +93,11 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| Custom LLM selection per agent | GSD already has model profile system — use it |
+| Custom LLM selection per agent | GSD already has model profile system -- use it |
 | Custom dashboard UI | Paperclip has dashboard with plugin UI slots |
-| GSD file parsing reimplementation | gsd-tools.cjs handles all parsing — wrap, don't rewrite |
+| GSD file parsing reimplementation | gsd-tools.cjs handles all parsing -- wrap, don't rewrite |
 | Agent-to-agent free-form chat | Structured GSD_SIGNAL protocol is more reliable than unstructured conversation |
-| Autonomous deployment | Pipeline ends at verified committed code — user deploys manually |
+| Autonomous deployment | Pipeline ends at verified committed code -- user deploys manually |
 | Browser/web interaction for agents | Agents use terminal, code editor, file system only |
 | Real-time streaming of agent output | Structured status updates at transitions, not live streams |
 | Git branching per phase | Single branch with sequential merge is simpler and already decided |
@@ -109,13 +109,55 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated during roadmap creation) | | |
+| PIPE-01 | Phase 1 | Pending |
+| PIPE-02 | Phase 2 | Pending |
+| PIPE-03 | Phase 4 | Pending |
+| PIPE-04 | Phase 1 | Pending |
+| PIPE-05 | Phase 1 | Pending |
+| PIPE-06 | Phase 2 | Pending |
+| PIPE-07 | Phase 5 | Pending |
+| PIPE-08 | Phase 4 | Pending |
+| AGNT-01 | Phase 3 | Pending |
+| AGNT-02 | Phase 3 | Pending |
+| AGNT-03 | Phase 3 | Pending |
+| AGNT-04 | Phase 3 | Pending |
+| AGNT-05 | Phase 3 | Pending |
+| AGNT-06 | Phase 3 | Pending |
+| AGNT-07 | Phase 3 | Pending |
+| AGNT-08 | Phase 4 | Pending |
+| AGNT-09 | Phase 4 | Pending |
+| AGNT-10 | Phase 4 | Pending |
+| AGNT-11 | Phase 6 | Pending |
+| AGNT-12 | Phase 4 | Pending |
+| EXEC-01 | Phase 5 | Pending |
+| EXEC-02 | Phase 4 | Pending |
+| EXEC-03 | Phase 4 | Pending |
+| EXEC-04 | Phase 4 | Pending |
+| EXEC-05 | Phase 4 | Pending |
+| CLAW-01 | Phase 6 | Pending |
+| CLAW-02 | Phase 6 | Pending |
+| CLAW-03 | Phase 6 | Pending |
+| CLAW-04 | Phase 6 | Pending |
+| CLAW-05 | Phase 6 | Pending |
+| CLAW-06 | Phase 6 | Pending |
+| CLAW-07 | Phase 6 | Pending |
+| API-01 | Phase 6 | Pending |
+| API-02 | Phase 6 | Pending |
+| API-03 | Phase 6 | Pending |
+| API-04 | Phase 6 | Pending |
+| API-05 | Phase 6 | Pending |
+| API-06 | Phase 6 | Pending |
+| API-07 | Phase 6 | Pending |
+| OBSV-01 | Phase 6 | Pending |
+| OBSV-02 | Phase 6 | Pending |
+| OBSV-03 | Phase 6 | Pending |
+| OBSV-04 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 35 total
-- Mapped to phases: 0
-- Unmapped: 35 ⚠️
+- v1 requirements: 43 total
+- Mapped to phases: 43
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-18*
-*Last updated: 2026-03-18 after initial definition*
+*Last updated: 2026-03-18 after roadmap creation*
