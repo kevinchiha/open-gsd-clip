@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-03-18T10:48:25.151Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-03-18T10:50:39.194Z"
 last_activity: 2026-03-18 -- Completed 01-04 signal parser with 12 Zod-validated signal types
 progress:
   total_phases: 6
-  completed_phases: 0
-  total_plans: 5
-  completed_plans: 3
+  completed_phases: 1
+  total_plans: 7
+  completed_plans: 4
   percent: 50
 ---
 
@@ -53,6 +53,7 @@ Progress: [█████░░░░░] 50%
 | Phase 01 P01 | 4min | 2 tasks | 13 files |
 | Phase 01 P04 | 5min | 2 tasks | 6 files |
 | Phase 01 P03 | 5min | 2 tasks | 9 files |
+| Phase 01 P02 | 8min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,8 @@ Recent decisions affecting current work:
 - [Phase 01]: Explicit .strip() on all signal Zod schemas to document unknown-field stripping intent
 - [Phase 01]: Non-greedy regex iterates --- blocks to find GSD_SIGNAL marker among multiple delimited sections
 - [Phase 01]: FindPhaseSchema allows nullable directory/phase_number/phase_name for found=false case (verified against real gsd-tools.cjs)
+- [Phase 01]: Hand-rolled JSON-RPC over stdio -- no json-rpc-2.0 library needed for 8-method protocol
+- [Phase 01]: node:child_process.spawn for integration tests -- simpler than execa for test harness
 
 ### Pending Todos
 
@@ -84,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T10:48:25.149Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-03-18T10:50:39.192Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
