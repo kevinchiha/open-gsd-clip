@@ -11,12 +11,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **PIPE-01**: Plugin registers with Paperclip via definePlugin() and responds to health checks
 - [x] **PIPE-02**: Pipeline state machine tracks phase steps (idle -> discussing -> planning -> executing -> verifying -> done/failed) with validated transitions
-- [ ] **PIPE-03**: Pipeline can be started with a project brief and target project path
+- [x] **PIPE-03**: Pipeline can be started with a project brief and target project path
 - [x] **PIPE-04**: gsd-tools.cjs bridge parses roadmap phases, dependencies, status, and plan indices via typed wrapper
 - [x] **PIPE-05**: Signal parser extracts GSD_SIGNAL structured data from Paperclip issue comments
 - [x] **PIPE-06**: Phase dependency resolver determines which phases can run in parallel vs must run sequentially based on roadmap data
 - [ ] **PIPE-07**: Sequential merge strategy ensures parallel phases commit results in roadmap order without git conflicts
-- [ ] **PIPE-08**: Pipeline executes all phases end-to-end (discuss -> plan -> execute -> verify per phase) without human intervention
+- [x] **PIPE-08**: Pipeline executes all phases end-to-end (discuss -> plan -> execute -> verify per phase) without human intervention
 
 ### Agent System
 
@@ -31,7 +31,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **AGNT-09**: CEO agent can request discussion revision when CONTEXT.md has gaps, triggering re-discussion
 - [x] **AGNT-10**: CEO decision audit log records every autonomous decision with timestamp, context, options considered, choice made, and reasoning
 - [ ] **AGNT-11**: CEO escalates big architectural or scope decisions to user via Discord and waits for response (non-blocking for other phases)
-- [ ] **AGNT-12**: CEO agent can detect when execution reveals plan problems and trigger re-planning for the affected phase
+- [x] **AGNT-12**: CEO agent can detect when execution reveals plan problems and trigger re-planning for the affected phase
 
 ### Execution & Reliability
 
@@ -39,7 +39,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **EXEC-02**: Error handler classifies failures into categories (transient, context overflow, test failure, merge conflict, fatal) and applies appropriate recovery strategy
 - [x] **EXEC-03**: Retry manager retries failed operations with exponential backoff and jitter
 - [x] **EXEC-04**: Stale agent detection identifies hung agents via progress-based health checks (no output for configurable threshold) and respawns them
-- [ ] **EXEC-05**: Phase-level retry allows retrying a specific failed phase from a specific step without restarting the entire pipeline
+- [x] **EXEC-05**: Phase-level retry allows retrying a specific failed phase from a specific step without restarting the entire pipeline
 
 ### OpenClaw Integration
 
@@ -111,12 +111,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | PIPE-01 | Phase 1 | Complete |
 | PIPE-02 | Phase 2 | Complete |
-| PIPE-03 | Phase 4 | Pending |
+| PIPE-03 | Phase 4 | Complete |
 | PIPE-04 | Phase 1 | Complete |
 | PIPE-05 | Phase 1 | Complete |
 | PIPE-06 | Phase 2 | Complete |
 | PIPE-07 | Phase 5 | Pending |
-| PIPE-08 | Phase 4 | Pending |
+| PIPE-08 | Phase 4 | Complete |
 | AGNT-01 | Phase 3 | Complete |
 | AGNT-02 | Phase 3 | Complete |
 | AGNT-03 | Phase 3 | Complete |
@@ -128,12 +128,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AGNT-09 | Phase 4 | Complete |
 | AGNT-10 | Phase 4 | Complete |
 | AGNT-11 | Phase 6 | Pending |
-| AGNT-12 | Phase 4 | Pending |
+| AGNT-12 | Phase 4 | Complete |
 | EXEC-01 | Phase 5 | Pending |
 | EXEC-02 | Phase 4 | Complete |
 | EXEC-03 | Phase 4 | Complete |
 | EXEC-04 | Phase 4 | Complete |
-| EXEC-05 | Phase 4 | Pending |
+| EXEC-05 | Phase 4 | Complete |
 | CLAW-01 | Phase 6 | Pending |
 | CLAW-02 | Phase 6 | Pending |
 | CLAW-03 | Phase 6 | Pending |
