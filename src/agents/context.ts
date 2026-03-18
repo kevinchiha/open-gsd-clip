@@ -21,6 +21,17 @@ export const ROLE_LABELS: Record<AgentRole, string> = {
 };
 
 /**
+ * Signal types that each role emits on completion.
+ */
+export const ROLE_SIGNALS: Record<AgentRole, string> = {
+  ceo: 'PROJECT_READY',
+  discusser: 'DISCUSS_COMPLETE',
+  planner: 'PLAN_COMPLETE',
+  executor: 'EXECUTE_COMPLETE',
+  verifier: 'VERIFY_COMPLETE',
+};
+
+/**
  * Context for building an agent's issue title and description.
  */
 export interface AgentContext {
@@ -54,4 +65,77 @@ export function buildIssueTitle(ctx: AgentContext): string {
   }
 
   return `${label}: Run ${ctx.gsdCommand}`;
+}
+
+/**
+ * Builds the issue description for an agent task.
+ *
+ * The description includes:
+ * - GSD Task header
+ * - Project path
+ * - Command to run
+ * - Phase number (for non-CEO roles)
+ * - Brief section (CEO only)
+ * - When Complete section with GSD_SIGNAL template
+ *
+ * @param ctx - The agent context
+ * @returns The issue description string
+ */
+export function buildIssueDescription(ctx: AgentContext): string {
+  const signal = ROLE_SIGNALS[ctx.role];
+  const lines: string[] = [];
+
+  // Header
+  lines.push('# GSD Task');
+  lines.push('');
+
+  // Project path
+  lines.push(`**Project:** \`${ctx.projectPath}\``);
+  lines.push('');
+
+  // Phase number (for non-CEO roles)
+  if (ctx.phaseNumber !== undefined) {
+    lines.push(`**Phase:** ${ctx.phaseNumber}`);
+    lines.push('');
+  }
+
+  // Command section
+  lines.push('## Your Task');
+  lines.push('');
+  lines.push('Run the following command:');
+  lines.push('');
+  lines.push('```');
+  lines.push(ctx.gsdCommand);
+  lines.push('```');
+  lines.push('');
+
+  // CEO special instructions for passing brief to --auto
+  if (ctx.role === 'ceo' && ctx.brief) {
+    lines.push('## Project Brief');
+    lines.push('');
+    lines.push(ctx.brief);
+    lines.push('');
+    lines.push(
+      'Pass this brief to the --auto flag so the agent can work autonomously.',
+    );
+    lines.push('');
+  }
+
+  // When Complete section with signal template
+  lines.push('## When Complete');
+  lines.push('');
+  lines.push('Post a comment on this issue with the following signal:');
+  lines.push('');
+  lines.push('---');
+  lines.push(`GSD_SIGNAL:${signal}`);
+  if (ctx.phaseNumber !== undefined) {
+    lines.push(`phase: ${ctx.phaseNumber}`);
+  } else {
+    lines.push('phase: 0');
+  }
+  lines.push('status: success');
+  lines.push('summary: [brief description of what was done]');
+  lines.push('---');
+
+  return lines.join('\n');
 }
