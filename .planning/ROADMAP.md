@@ -30,11 +30,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. gsd-tools.cjs bridge can parse a real roadmap and return typed phase data (names, dependencies, status)
   3. Signal parser correctly extracts and validates GSD_SIGNAL structured data from Paperclip issue comment strings
   4. Project builds, lints, and passes all unit tests with TypeScript 5.8 / Zod 4 / vitest toolchain
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Project scaffolding, shared module, and test fixtures
+- [ ] 01-02-PLAN.md — Plugin shell (JSON-RPC transport, handler, integration test)
+- [ ] 01-03-PLAN.md — GSD bridge (discovery, executor, schemas, typed commands)
+- [ ] 01-04-PLAN.md — Signal parser (12 signal types, schemas, extraction, formatting)
 
 ### Phase 2: Pipeline State Machine
 **Goal**: Pipeline state transitions are fully modeled, validated, and serializable -- and the dependency resolver can determine which phases run in parallel vs sequentially
@@ -123,7 +125,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation and Protocol | 0/0 | Not started | - |
+| 1. Foundation and Protocol | 0/4 | Not started | - |
 | 2. Pipeline State Machine | 0/0 | Not started | - |
 | 3. Agent Spawning Infrastructure | 0/0 | Not started | - |
 | 4. Sequential Pipeline Execution | 0/0 | Not started | - |
