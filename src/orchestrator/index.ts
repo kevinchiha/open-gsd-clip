@@ -18,6 +18,8 @@ export {
 export { SerialEventQueue } from './event-queue.js';
 // Health monitoring
 export { HealthMonitor } from './health-monitor.js';
+// Merge queue
+export { MergeQueue } from './merge-queue.js';
 // Pipeline runner
 export { PipelineRunner } from './pipeline-runner.js';
 // Quality gate
@@ -40,3 +42,6 @@ export {
   DEFAULT_HEALTH_CONFIG,
   DEFAULT_RETRY_CONFIG,
 } from './types.js';
+// Worktree manager
+export type { WorktreeInfo } from './worktree-manager.js';
+export { WorktreeManager } from './worktree-manager.js';

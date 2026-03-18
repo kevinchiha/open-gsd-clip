@@ -49,12 +49,12 @@ import { classifyError, retryWithBackoff } from './error-handler.js';
 import { SerialEventQueue } from './event-queue.js';
 import { HealthMonitor } from './health-monitor.js';
 import { MergeQueue } from './merge-queue.js';
-import { WorktreeManager } from './worktree-manager.js';
 import {
   buildReviewIssueDescription,
   buildRevisionIssueDescription,
 } from './quality-gate.js';
 import type { OrchestratorConfig } from './types.js';
+import { WorktreeManager } from './worktree-manager.js';
 
 const log = createChildLogger('pipeline-runner');
 
