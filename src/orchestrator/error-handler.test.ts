@@ -4,7 +4,6 @@ import {
   calculateBackoffDelay,
   retryWithBackoff,
 } from './error-handler.js';
-import { DEFAULT_RETRY_CONFIG } from './types.js';
 import type { RetryConfig } from './types.js';
 
 // ── classifyError ───────────────────────────────────────────────────
