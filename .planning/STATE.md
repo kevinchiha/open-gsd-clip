@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed 06-03-PLAN.md
-last_updated: "2026-03-18T18:24:14.726Z"
-last_activity: 2026-03-18 -- Completed 06-03 (RPC handler wiring and final integration)
+status: executing
+stopped_at: Completed 06.1-01-PLAN.md
+last_updated: "2026-03-18T19:39:08.327Z"
+last_activity: 2026-03-18 -- Completed 06.1-01 (Manifest extraction and initialize protocol fix)
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 6
-  total_plans: 19
-  completed_plans: 19
-  percent: 100
+  total_plans: 21
+  completed_plans: 20
+  percent: 95
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** Send a project brief via Discord, come back later to a fully built and verified codebase
-**Current focus:** Phase 6: User-Facing Integration (API schemas, notifications, token tracking)
+**Current focus:** Phase 6.1: Paperclip Plugin Packaging and Integration Readiness
 
 ## Current Position
 
-Phase: 6 of 6 (User-Facing Integration)
-Plan: 3 of 3 in current phase (06-03 complete)
-Status: All phases complete
-Last activity: 2026-03-18 -- Completed 06-03 (RPC handler wiring and final integration)
+Phase: 6.1 of 6.1 (Paperclip Plugin Packaging and Integration Readiness)
+Plan: 1 of 2 in current phase (06.1-01 complete)
+Status: In progress
+Last activity: 2026-03-18 -- Completed 06.1-01 (Manifest extraction and initialize protocol fix)
 
-Progress: [██████████] 100%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [██████████] 100%
 | Phase 06 P02 | 7min | 2 tasks | 8 files |
 | Phase 06 P01 | 5min | 2 tasks | 12 files |
 | Phase 06 P03 | 6min | 2 tasks | 7 files |
+| Phase 06.1 P01 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -135,6 +136,13 @@ Recent decisions affecting current work:
 - [Phase 06]: MethodHandler type widened to JsonRpcResponse | JsonRpcErrorResponse for executeAction error returns
 - [Phase 06]: Stub HostServices pattern -- PipelineRunner gets warning-only stubs at startup, real services via initialize RPC
 - [Phase 06]: OverrideSchema fixed from z.string().uuid() to ESC-prefix regex matching actual PipelineRunner escalation format
+- [Phase 06.1]: Manifest exports both default and named to satisfy Paperclip's mod.default ?? mod pattern
+- [Phase 06.1]: Worker.ts calls startPlugin() unconditionally -- no isMainModule guard since only loaded via fork()
+- [Phase 06.1]: Initialize returns { ok: true, supportedMethods } instead of manifest to match Paperclip plugin-worker-manager protocol
+
+### Roadmap Evolution
+
+- Phase 06.1 inserted after Phase 06: Paperclip plugin packaging and integration readiness (URGENT)
 
 ### Pending Todos
 
@@ -148,7 +156,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T18:23:22.820Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-03-18T19:39:08.325Z
+Stopped at: Completed 06.1-01-PLAN.md
 Resume file: None
 Next action: All 19 plans across 6 phases complete. Project milestone v1.0 reached.
