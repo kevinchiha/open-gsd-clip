@@ -1,10 +1,12 @@
 /**
  * PipelineRunner -- the orchestration core.
  *
- * Drives the end-to-end sequential execution loop by reacting to agent
- * completion events. Transitions the pipeline and phase FSMs, spawns
- * the next agent based on phase status, and handles quality gates,
- * error recovery, and state persistence.
+ * Drives execution by reacting to agent completion events. Supports both
+ * sequential and parallel execution: when the execution plan contains
+ * groups with multiple phases, all phases in a group start simultaneously,
+ * each in its own git worktree. Completed results merge in roadmap order
+ * via MergeQueue. Sequential plans (groups of size 1) behave identically
+ * to pre-parallel behavior.
  *
  * The full per-phase loop:
  *   discussing -> reviewing -> planning -> executing -> verifying -> done
@@ -34,6 +36,7 @@ import { buildExecutionPlan } from '../pipeline/resolver.js';
 import { serialize } from '../pipeline/serialization.js';
 import type {
   PhaseEvent,
+  PhaseInput,
   PhaseState,
   PipelineState,
 } from '../pipeline/types.js';
@@ -45,6 +48,8 @@ import { AuditLog } from './audit-log.js';
 import { classifyError, retryWithBackoff } from './error-handler.js';
 import { SerialEventQueue } from './event-queue.js';
 import { HealthMonitor } from './health-monitor.js';
+import { MergeQueue } from './merge-queue.js';
+import { WorktreeManager } from './worktree-manager.js';
 import {
   buildReviewIssueDescription,
   buildRevisionIssueDescription,
@@ -65,6 +70,13 @@ export class PipelineRunner {
 
   /** Track revision count per phase number. */
   private readonly revisionCounts = new Map<number, number>();
+
+  /** Worktree manager for parallel phase isolation. */
+  private worktreeManager: WorktreeManager | null = null;
+  /** Merge queue for ordered merging of completed phases. */
+  private mergeQueue: MergeQueue | null = null;
+  /** Phase dependency inputs for findReadyPhases. */
+  private phaseInputs: PhaseInput[] = [];
 
   constructor(services: HostServices, config: OrchestratorConfig) {
     this.services = services;
@@ -170,10 +182,11 @@ export class PipelineRunner {
   }
 
   /**
-   * Clean up resources (health monitor timers).
+   * Clean up resources (health monitor timers, worktrees).
    */
   destroy(): void {
     this.healthMonitor.destroy();
+    void this.worktreeManager?.cleanupAll().catch(() => {});
   }
 
   // ── Private: Agent completion processing ────────────────────────
@@ -320,7 +333,7 @@ export class PipelineRunner {
     // Build execution plan from roadmap phases
     // For now, use a simple sequential plan with 6 phases (from PROJECT.md)
     // In production, this would read the roadmap via gsd-tools bridge
-    const phaseInputs = Array.from({ length: 6 }, (_, i) => ({
+    const phaseInputs: PhaseInput[] = Array.from({ length: 6 }, (_, i) => ({
       phaseNumber: i + 1,
       dependsOn: i === 0 ? [] : [i],
     }));
@@ -332,6 +345,24 @@ export class PipelineRunner {
     }
 
     const executionPlan = planResult.value;
+
+    // Derive phaseInputs from execution plan groups for dependency tracking.
+    // Each phase in group N depends on all phases in preceding groups.
+    // This ensures findReadyPhases matches the actual execution plan.
+    this.phaseInputs = this.derivePhaseInputs(executionPlan.groups);
+
+    // Initialize WorktreeManager and prune stale worktrees
+    this.worktreeManager = new WorktreeManager(this.state.projectPath);
+    await this.worktreeManager.pruneStaleWorktrees();
+
+    // Initialize MergeQueue with ordered merge and worktree cleanup callback
+    this.mergeQueue = new MergeQueue(
+      executionPlan.phaseOrder,
+      async (phaseNumber: number) => {
+        await this.worktreeManager?.mergePhase(phaseNumber);
+        await this.worktreeManager?.removeWorktree(phaseNumber);
+      },
+    );
 
     // Create PhaseState for each phase
     const phases = executionPlan.phaseOrder.map((num) =>
@@ -353,12 +384,10 @@ export class PipelineRunner {
     }
     this.state = runResult.state;
 
-    // Start first phase in execution order
-    const firstPhaseNumber = executionPlan.phaseOrder[0];
-    if (firstPhaseNumber !== undefined) {
-      await this.handlePhaseEvent(firstPhaseNumber, {
-        type: 'DEPENDENCIES_MET',
-      });
+    // Start ALL phases in first execution group
+    const firstGroup = executionPlan.groups[0] ?? [];
+    for (const phaseNumber of firstGroup) {
+      await this.startPhase(phaseNumber);
     }
 
     await this.persistState();
@@ -432,19 +461,63 @@ export class PipelineRunner {
     }
   }
 
+  // ── Private: Phase start / dependency resolution ─────────────────
+
+  /**
+   * Start a phase: create worktree (for isolation) and send DEPENDENCIES_MET.
+   */
+  private async startPhase(phaseNumber: number): Promise<void> {
+    if (this.worktreeManager) {
+      await this.worktreeManager.createWorktree(phaseNumber);
+    }
+    await this.handlePhaseEvent(phaseNumber, { type: 'DEPENDENCIES_MET' });
+  }
+
+  /**
+   * Find all pending phases whose dependencies are now fully met.
+   * Returns sorted array of phase numbers ready to start.
+   */
+  private findReadyPhases(): number[] {
+    if (!this.state) return [];
+
+    const ready: number[] = [];
+    const donePhases = new Set(
+      this.state.phases
+        .filter((p) => p.status === 'done')
+        .map((p) => p.phaseNumber),
+    );
+
+    for (const phase of this.state.phases) {
+      if (phase.status !== 'pending') continue;
+
+      const input = this.phaseInputs.find(
+        (p) => p.phaseNumber === phase.phaseNumber,
+      );
+      if (!input) continue;
+
+      const allDepsMet = input.dependsOn.every((dep) => donePhases.has(dep));
+      if (allDepsMet) {
+        ready.push(phase.phaseNumber);
+      }
+    }
+
+    return ready.sort((a, b) => a - b);
+  }
+
   // ── Private: Phase completion / failure ─────────────────────────
 
   /**
-   * Handle phase completion: check if all phases done, start next if not.
+   * Handle phase completion: enqueue in merge queue, check if all done,
+   * find and start newly-unblocked phases.
    */
   private async onPhaseComplete(phaseNumber: number): Promise<void> {
     if (!this.state) return;
 
     log.info({ phaseNumber }, 'Phase completed');
 
-    const allDone = this.state.phases.every(
-      (p) => p.status === 'done' || p.status === 'failed',
-    );
+    // Enqueue completed phase in merge queue for ordered merging
+    await this.mergeQueue?.enqueue(phaseNumber);
+
     const allSucceeded = this.state.phases.every((p) => p.status === 'done');
 
     if (allSucceeded) {
@@ -459,18 +532,10 @@ export class PipelineRunner {
       return;
     }
 
-    if (!allDone) {
-      // Find next pending phase in execution order
-      const plan = this.state.executionPlan;
-      if (plan) {
-        for (const num of plan.phaseOrder) {
-          const p = this.state.phases.find((ph) => ph.phaseNumber === num);
-          if (p && p.status === 'pending') {
-            await this.handlePhaseEvent(num, { type: 'DEPENDENCIES_MET' });
-            break;
-          }
-        }
-      }
+    // Find all pending phases whose dependencies are now met
+    const readyPhases = this.findReadyPhases();
+    for (const ready of readyPhases) {
+      await this.startPhase(ready);
     }
 
     await this.persistState();
@@ -531,6 +596,9 @@ export class PipelineRunner {
         : `Error type ${classified.type} is not retryable`,
     });
 
+    // Mark failed phase in merge queue so it doesn't block later merges
+    await this.mergeQueue?.markFailed(phaseNumber);
+
     // Cascade failure to dependent phases
     if (this.state.executionPlan && phase.error) {
       const dependents = this.buildDependentsMap();
@@ -540,6 +608,15 @@ export class PipelineRunner {
         phase.error,
         dependents,
       );
+
+      // Mark cascade-failed dependent phases in merge queue too
+      const cascadedPhases = dependents.get(phaseNumber) ?? [];
+      for (const depPhase of cascadedPhases) {
+        const p = this.state.phases.find((ph) => ph.phaseNumber === depPhase);
+        if (p?.status === 'failed') {
+          await this.mergeQueue?.markFailed(depPhase);
+        }
+      }
     }
 
     // Check if any phases can still proceed
@@ -625,7 +702,9 @@ export class PipelineRunner {
     if (!this.state || !this.agents) return;
 
     const agentId = this.agents.discusser.agentId;
-    const projectPath = this.state.projectPath;
+    const projectPath =
+      this.worktreeManager?.getWorkingDirectory(phaseNumber) ??
+      this.state.projectPath;
     const spawn = await retryWithBackoff(
       () =>
         spawnAgent(this.services, this.companyId, agentId, {
@@ -654,7 +733,9 @@ export class PipelineRunner {
       return;
     }
 
-    const projectPath = this.state.projectPath;
+    const projectPath =
+      this.worktreeManager?.getWorkingDirectory(phaseNumber) ??
+      this.state.projectPath;
     const paddedPhase = String(phaseNumber).padStart(2, '0');
     const contextMdPath = `.planning/phases/${paddedPhase}-*/XX-CONTEXT.md`;
 
@@ -701,7 +782,9 @@ export class PipelineRunner {
     if (!this.state || !this.agents) return;
 
     const agentId = this.agents.planner.agentId;
-    const projectPath = this.state.projectPath;
+    const projectPath =
+      this.worktreeManager?.getWorkingDirectory(phaseNumber) ??
+      this.state.projectPath;
     const spawn = await retryWithBackoff(
       () =>
         spawnAgent(this.services, this.companyId, agentId, {
@@ -720,7 +803,9 @@ export class PipelineRunner {
     if (!this.state || !this.agents) return;
 
     const agentId = this.agents.executor.agentId;
-    const projectPath = this.state.projectPath;
+    const projectPath =
+      this.worktreeManager?.getWorkingDirectory(phaseNumber) ??
+      this.state.projectPath;
     const spawn = await retryWithBackoff(
       () =>
         spawnAgent(this.services, this.companyId, agentId, {
@@ -739,7 +824,9 @@ export class PipelineRunner {
     if (!this.state || !this.agents) return;
 
     const agentId = this.agents.verifier.agentId;
-    const projectPath = this.state.projectPath;
+    const projectPath =
+      this.worktreeManager?.getWorkingDirectory(phaseNumber) ??
+      this.state.projectPath;
     const spawn = await retryWithBackoff(
       () =>
         spawnAgent(this.services, this.companyId, agentId, {
@@ -760,7 +847,9 @@ export class PipelineRunner {
   ): Promise<void> {
     if (!this.state || !this.agents) return;
 
-    const projectPath = this.state.projectPath;
+    const projectPath =
+      this.worktreeManager?.getWorkingDirectory(phaseNumber) ??
+      this.state.projectPath;
     const gsdCommand = `/gsd:discuss-phase ${phaseNumber} --auto`;
     const description = buildRevisionIssueDescription(
       projectPath,
@@ -844,24 +933,38 @@ export class PipelineRunner {
   }
 
   /**
+   * Derive PhaseInput dependency declarations from execution plan groups.
+   * Phases in group 0 have no dependencies. Phases in group N depend on
+   * all phases in the immediately preceding group (group N-1).
+   */
+  private derivePhaseInputs(groups: number[][]): PhaseInput[] {
+    const inputs: PhaseInput[] = [];
+    for (let i = 0; i < groups.length; i++) {
+      const group = groups[i];
+      if (!group) continue;
+      const dependsOn = i > 0 ? (groups[i - 1] ?? []) : [];
+      for (const phaseNumber of group) {
+        inputs.push({ phaseNumber, dependsOn: [...dependsOn] });
+      }
+    }
+    return inputs;
+  }
+
+  /**
    * Build a map of phase -> phases that depend on it (forward adjacency).
+   * Uses phaseInputs for accurate dependency data (supports parallel plans).
    */
   private buildDependentsMap(): Map<number, number[]> {
     const dependents = new Map<number, number[]>();
-    if (!this.state?.executionPlan) return dependents;
 
-    // For a sequential plan, each phase depends on the previous
-    const order = this.state.executionPlan.phaseOrder;
-    for (let i = 0; i < order.length; i++) {
-      const phaseNum = order[i];
-      if (phaseNum === undefined) continue;
-      const deps: number[] = [];
-      const next = order[i + 1];
-      if (next !== undefined) {
-        deps.push(next);
+    for (const input of this.phaseInputs) {
+      for (const dep of input.dependsOn) {
+        const list = dependents.get(dep) ?? [];
+        list.push(input.phaseNumber);
+        dependents.set(dep, list);
       }
-      dependents.set(phaseNum, deps);
     }
+
     return dependents;
   }
 

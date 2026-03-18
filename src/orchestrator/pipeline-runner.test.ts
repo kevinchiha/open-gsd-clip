@@ -1202,7 +1202,8 @@ describe('PipelineRunner', () => {
         issueId: 'issue-1',
       });
 
-      // Phase 1 agent fails
+      // Phase 1 agent fails -- use 'issue-1' which is the activeAgentIssueId
+      // assigned during startPhase (default spawnAgent mock returns issue-1)
       classifyError.mockReturnValue({
         type: 'fatal',
         retryable: false,
@@ -1210,16 +1211,11 @@ describe('PipelineRunner', () => {
         message: 'fatal error',
       });
 
-      spawnAgent.mockResolvedValue({
-        issueId: 'issue-p1-discuss',
-        runId: 'run-p1-discuss',
-      });
-
       await runner.handleAgentCompletion({
         status: 'failed',
         agentId: 'discusser-agent-id',
-        runId: 'run-p1-discuss',
-        issueId: 'issue-p1-discuss',
+        runId: 'run-1',
+        issueId: 'issue-1',
       });
 
       // Verify markFailed was called on MergeQueue
