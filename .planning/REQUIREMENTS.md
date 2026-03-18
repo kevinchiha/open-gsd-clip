@@ -10,7 +10,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Pipeline Core
 
 - [x] **PIPE-01**: Plugin registers with Paperclip via definePlugin() and responds to health checks
-- [ ] **PIPE-02**: Pipeline state machine tracks phase steps (idle -> discussing -> planning -> executing -> verifying -> done/failed) with validated transitions
+- [x] **PIPE-02**: Pipeline state machine tracks phase steps (idle -> discussing -> planning -> executing -> verifying -> done/failed) with validated transitions
 - [ ] **PIPE-03**: Pipeline can be started with a project brief and target project path
 - [x] **PIPE-04**: gsd-tools.cjs bridge parses roadmap phases, dependencies, status, and plan indices via typed wrapper
 - [x] **PIPE-05**: Signal parser extracts GSD_SIGNAL structured data from Paperclip issue comments
@@ -110,7 +110,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PIPE-01 | Phase 1 | Complete |
-| PIPE-02 | Phase 2 | Pending |
+| PIPE-02 | Phase 2 | Complete |
 | PIPE-03 | Phase 4 | Pending |
 | PIPE-04 | Phase 1 | Complete |
 | PIPE-05 | Phase 1 | Complete |

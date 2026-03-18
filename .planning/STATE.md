@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-03-18T10:58:11.934Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-18T11:03:52.092Z"
 last_activity: 2026-03-18 -- Completed 02-02 DAG dependency resolver with Kahn's algorithm
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 71
 ---
 
@@ -55,6 +55,7 @@ Progress: [███████░░░] 71%
 | Phase 01 P03 | 5min | 2 tasks | 9 files |
 | Phase 01 P02 | 8min | 2 tasks | 7 files |
 | Phase 02 P02 | 2min | 1 tasks | 2 files |
+| Phase 02 P01 | 7min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,9 @@ Recent decisions affecting current work:
 - [Phase 02]: PhaseInput/ExecutionPlan types defined locally in resolver.ts -- Plan 03 reconciles with types.ts
 - [Phase 02]: Sorted phase numbers within parallel groups for deterministic resolver output
 - [Phase 02]: Missing dependency validation runs before graph construction (fail-fast)
+- [Phase 02]: Pure transition functions (no side effects) for pipeline and phase FSMs -- consumers react to returned state
+- [Phase 02]: Switch-based pipeline FSM for heterogeneous events; data-driven transition table for uniform phase events
+- [Phase 02]: BFS cascade with visited set prevents infinite loops and processes each node exactly once
 
 ### Pending Todos
 
@@ -91,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T10:58:11.932Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-03-18T11:03:52.091Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
