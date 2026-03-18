@@ -38,7 +38,7 @@ const manifest: PaperclipPluginManifestV1 = {
 type MethodHandler = (
   params: unknown,
   id: string | number | null,
-) => Promise<JsonRpcResponse>;
+) => Promise<JsonRpcResponse | JsonRpcErrorResponse>;
 
 function success(result: unknown, id: string | number | null): JsonRpcResponse {
   return { jsonrpc: '2.0', result, id };
