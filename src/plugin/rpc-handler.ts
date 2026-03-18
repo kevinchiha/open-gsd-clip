@@ -60,7 +60,50 @@ const methods: Record<string, MethodHandler> = {
   },
 
   async onEvent(params, id) {
-    log.info({ params }, 'Received event');
+    const event = params as { type: string; data: unknown } | undefined;
+
+    if (!event?.type) {
+      log.debug({ params }, 'Received event without type');
+      return success({ received: true }, id);
+    }
+
+    log.debug({ eventType: event.type }, 'Received event');
+
+    // Handle run status events for agent completion detection
+    if (event.type === 'heartbeat.run.status') {
+      const run = event.data as {
+        status: string;
+        agentId: string;
+        runId: string;
+        issueId?: string;
+      };
+
+      // Only log terminal states at info level
+      if (run.status === 'succeeded' || run.status === 'failed') {
+        log.info(
+          {
+            status: run.status,
+            agentId: run.agentId,
+            runId: run.runId,
+            issueId: run.issueId,
+          },
+          'Agent run completed',
+        );
+
+        if (run.issueId) {
+          // Phase 4 will add: fetch comments via services.issues.listComments,
+          // parse GSD_SIGNAL, map to PhaseEvent, dispatch to FSM
+          log.info(
+            { issueId: run.issueId },
+            'Agent completed for issue (signal parsing deferred to Phase 4)',
+          );
+        }
+      }
+
+      return success({ received: true, status: run.status }, id);
+    }
+
+    // Default: acknowledge unknown event types
     return success({ received: true }, id);
   },
 

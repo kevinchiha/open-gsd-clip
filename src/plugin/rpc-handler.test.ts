@@ -43,7 +43,7 @@ describe('rpc-handler', () => {
   });
 
   describe('onEvent', () => {
-    it('returns received: true', async () => {
+    it('returns received: true for unknown event types', async () => {
       const response = await handler({
         jsonrpc: '2.0',
         method: 'onEvent',
@@ -55,6 +55,73 @@ describe('rpc-handler', () => {
         jsonrpc: '2.0',
         result: { received: true },
         id: 3,
+      });
+    });
+
+    it('returns status for running heartbeat.run.status event', async () => {
+      const response = await handler({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: {
+          type: 'heartbeat.run.status',
+          data: {
+            status: 'running',
+            agentId: 'agent-1',
+            runId: 'run-1',
+          },
+        },
+        id: 20,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 20,
+        result: { received: true, status: 'running' },
+      });
+    });
+
+    it('returns status for succeeded heartbeat.run.status event', async () => {
+      const response = await handler({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: {
+          type: 'heartbeat.run.status',
+          data: {
+            status: 'succeeded',
+            agentId: 'agent-1',
+            runId: 'run-1',
+            issueId: 'issue-1',
+          },
+        },
+        id: 21,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 21,
+        result: { received: true, status: 'succeeded' },
+      });
+    });
+
+    it('returns status for failed heartbeat.run.status event', async () => {
+      const response = await handler({
+        jsonrpc: '2.0',
+        method: 'onEvent',
+        params: {
+          type: 'heartbeat.run.status',
+          data: {
+            status: 'failed',
+            agentId: 'agent-2',
+            runId: 'run-2',
+          },
+        },
+        id: 22,
+      });
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: 22,
+        result: { received: true, status: 'failed' },
       });
     });
   });
