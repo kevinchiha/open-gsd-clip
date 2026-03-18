@@ -69,6 +69,17 @@ export interface HostServices {
       reason?: string | null;
       prompt?: string;
     }): Promise<Result<{ runId: string }>>;
+    /** List agents (optional - may not be available) */
+    list?(params: {
+      name?: string;
+      companyId?: string;
+    }): Promise<Result<AgentDefinition[]>>;
+    /** Create a new agent (optional - may not be available) */
+    create?(params: {
+      name: string;
+      role: string;
+      adapterConfig: AgentConfig;
+    }): Promise<Result<AgentDefinition>>;
   };
   issues: {
     create(params: {
