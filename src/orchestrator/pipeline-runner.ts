@@ -278,6 +278,10 @@ export class PipelineRunner {
             runId,
             issueId,
           });
+        } else {
+          // Agent still running — record activity so the health monitor
+          // doesn't declare it stale while it's actively working.
+          this.healthMonitor.recordActivity(issueId);
         }
       } catch (err) {
         log.warn({ agentId, error: (err as Error).message }, 'Poll fetch failed');

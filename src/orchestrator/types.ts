@@ -32,8 +32,8 @@ export interface HealthConfig {
 }
 
 export const DEFAULT_HEALTH_CONFIG: HealthConfig = {
-  staleThresholdMs: 600_000, // 10 minutes
-  hardTimeoutMs: 1_800_000, // 30 minutes
+  staleThresholdMs: 1_800_000, // 30 minutes
+  hardTimeoutMs: 7_200_000, // 2 hours
   checkIntervalMs: 60_000, // 1 minute
 };
 
