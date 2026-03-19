@@ -488,13 +488,18 @@ export class PipelineRunner {
       }
 
       if (!signal) {
-        log.warn({ issueId: run.issueId }, 'No GSD signal found in comments');
+        // Agent completed successfully but didn't post a signal comment.
+        // Infer STEP_COMPLETED for the current phase status rather than
+        // failing the entire phase — the signal is nice-to-have metadata,
+        // not a hard requirement for advancing the pipeline.
         if (phase) {
-          await this.handlePhaseEvent(phase.phaseNumber, {
-            type: 'STEP_FAILED',
-            errorType: 'fatal',
-            message: 'Agent completed but no GSD signal found',
-          });
+          log.warn(
+            { issueId: run.issueId, phaseNumber: phase.phaseNumber, status: phase.status },
+            'No GSD signal found in comments — inferring STEP_COMPLETED from successful agent run',
+          );
+          await this.handlePhaseEvent(phase.phaseNumber, { type: 'STEP_COMPLETED' });
+        } else {
+          log.warn({ issueId: run.issueId }, 'No GSD signal found and no matching phase — ignoring');
         }
         return;
       }
