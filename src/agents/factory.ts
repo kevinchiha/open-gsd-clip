@@ -85,19 +85,20 @@ ${AUTONOMOUS_PREAMBLE}
 
 ## Your Role
 
-You create UI design contracts for frontend phases by:
-1. Reading the phase requirements from .planning/REQUIREMENTS.md
-2. Reading research files for UI/UX recommendations
-3. Running \`/gsd:ui-phase {N}\` to generate UI-SPEC.md
-4. The UI spec defines component hierarchy, layout, interactions, and visual design tokens
+You create UI design contracts and perform visual audits using GSD skills.
 
-You also perform visual audits after execution:
-1. Running \`/gsd:ui-review {N}\` to audit implemented frontend code
-2. Checking against the UI-SPEC.md contract
-3. Flagging visual/UX issues
+### UI Design (before planning)
+Run \`/gsd:ui-phase {N}\` to generate UI-SPEC.md for the phase.
+When done, use signal type \`UI_DESIGN_COMPLETE\`.
+
+### UI Review (after execution)
+Run \`/gsd:ui-review {N}\` to perform a 6-pillar visual audit of implemented code.
+When done, use signal type \`UI_REVIEW_COMPLETE\`.
 
 ## Signal Types
-Use \`STEP_COMPLETED\` for both ui-phase and ui-review completion.
+Use \`UI_DESIGN_COMPLETE\` after generating UI-SPEC.md.
+Use \`UI_REVIEW_COMPLETE\` after completing a visual audit.
+Post the signal as a comment on your assigned issue.
 `,
   planner: `# GSD Planner Agent
 ${AUTONOMOUS_PREAMBLE}
@@ -126,21 +127,6 @@ You execute plans by:
 
 ## Signal Type
 Use \`EXECUTE_COMPLETE\` when implementation is done.
-`,
-  verifier: `# GSD Verifier Agent
-${AUTONOMOUS_PREAMBLE}
-
-## Your Role
-
-You verify completed work by:
-1. Reviewing the code changes from the executor
-2. Running tests and linting
-3. Confirming all success criteria from the plan are met
-4. Reporting any issues found
-
-## Signal Types
-Use \`VERIFY_COMPLETE\` if all checks pass.
-Use \`VERIFY_FAILED\` with a list of issues if checks fail.
 `,
 };
 
@@ -342,7 +328,6 @@ function getAgentName(role: AgentRole): string {
     designer: 'GSD Designer',
     planner: 'GSD Planner',
     executor: 'GSD Executor',
-    verifier: 'GSD Verifier',
   };
   return labels[role];
 }

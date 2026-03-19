@@ -24,8 +24,7 @@ export const PHASE_TRANSITIONS: Record<
   ui_designing: { STEP_COMPLETED: 'planning', STEP_FAILED: 'failed' },
   planning: { STEP_COMPLETED: 'executing', STEP_FAILED: 'failed' },
   executing: { STEP_COMPLETED: 'ui_reviewing', STEP_FAILED: 'failed' },
-  ui_reviewing: { STEP_COMPLETED: 'verifying', STEP_FAILED: 'failed' },
-  verifying: { STEP_COMPLETED: 'done', STEP_FAILED: 'executing' },
+  ui_reviewing: { STEP_COMPLETED: 'done', STEP_FAILED: 'failed' },
   done: {},
   failed: { RETRY_PHASE: 'pending' },
 };
@@ -181,7 +180,6 @@ const STATUS_ORDER: PhaseStatus[] = [
   'planning',
   'executing',
   'ui_reviewing',
-  'verifying',
   'done',
   'failed',
 ];

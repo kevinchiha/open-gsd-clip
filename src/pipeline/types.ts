@@ -59,7 +59,7 @@ export interface TransitionResult<S> {
 
 /**
  * Per-phase status values following the GSD pipeline workflow:
- * pending -> discussing -> reviewing -> planning -> executing -> verifying -> done
+ * pending -> discussing -> reviewing -> planning -> executing -> ui_reviewing -> done
  * Any active step can fail. Failed phases can retry (back to pending).
  */
 export type PhaseStatus =
@@ -70,7 +70,6 @@ export type PhaseStatus =
   | 'planning'
   | 'executing'
   | 'ui_reviewing'
-  | 'verifying'
   | 'done'
   | 'failed';
 

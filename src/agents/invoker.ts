@@ -27,10 +27,12 @@ export interface SpawnResult {
 }
 
 /**
- * Spawn an agent by creating an issue and invoking the agent.
+ * Spawn an agent by creating an issue assigned to it.
  *
- * Creates an issue with isolated workspace settings, then invokes
- * the agent with a prompt pointing to the issue.
+ * Creates an issue with isolated workspace settings and assigneeAgentId.
+ * Paperclip's issue creation endpoint automatically triggers
+ * heartbeat.wakeup() when an issue is assigned to an agent with
+ * a non-backlog status, so no explicit invoke call is needed.
  *
  * @param services - HostServices for Paperclip API access
  * @param companyId - Company/tenant ID
@@ -69,26 +71,12 @@ export async function spawnAgent(
 
   const issueId = issueResult.value.id;
 
-  log.info({ role: ctx.role, issueId }, 'Issue created, invoking agent');
+  log.info(
+    { role: ctx.role, issueId },
+    'Issue created with assigneeAgentId — agent wakeup is automatic',
+  );
 
-  const invokeResult = await services.agents.invoke({
-    companyId,
-    agentId,
-    reason: `GSD ${ctx.role} task: ${title}`,
-    prompt: `You have a new task assigned. Issue ID: ${issueId}. Check your assigned issues and complete the task.`,
-  });
-
-  if (!invokeResult.ok) {
-    throw new Error(
-      `Failed to invoke agent for ${ctx.role}: ${invokeResult.error}`,
-    );
-  }
-
-  const { runId } = invokeResult.value;
-
-  log.info({ role: ctx.role, issueId, runId }, 'Agent invoked');
-
-  return { issueId, runId };
+  return { issueId, runId: issueId };
 }
 
 /**
@@ -123,6 +111,26 @@ export function mapSignalToPhaseEvent(signal: GsdSignal): PhaseEvent | null {
     case 'REVISION_NEEDED':
       return { type: 'REVISION_NEEDED' };
 
+    case 'UI_DESIGN_COMPLETE':
+      if (signal.status === 'success') {
+        return { type: 'STEP_COMPLETED' };
+      }
+      return {
+        type: 'STEP_FAILED',
+        errorType: 'fatal' as ErrorType,
+        message: signal.summary ?? 'UI design failed',
+      };
+
+    case 'UI_REVIEW_COMPLETE':
+      if (signal.status === 'success') {
+        return { type: 'STEP_COMPLETED' };
+      }
+      return {
+        type: 'STEP_FAILED',
+        errorType: 'fatal' as ErrorType,
+        message: signal.summary ?? 'UI review failed',
+      };
+
     case 'PLAN_COMPLETE':
       if (signal.status === 'success') {
         return { type: 'STEP_COMPLETED' };
@@ -141,16 +149,6 @@ export function mapSignalToPhaseEvent(signal: GsdSignal): PhaseEvent | null {
         type: 'STEP_FAILED',
         errorType: 'fatal' as ErrorType,
         message: signal.summary ?? 'Execution failed',
-      };
-
-    case 'VERIFY_COMPLETE':
-      return { type: 'STEP_COMPLETED' };
-
-    case 'VERIFY_FAILED':
-      return {
-        type: 'STEP_FAILED',
-        errorType: 'test_failure' as ErrorType,
-        message: signal.issues.join('; '),
       };
 
     case 'AGENT_ERROR':

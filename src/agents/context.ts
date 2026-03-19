@@ -17,7 +17,6 @@ export const ROLE_LABELS: Record<AgentRole, string> = {
   discusser: 'Discusser',
   planner: 'Planner',
   executor: 'Executor',
-  verifier: 'Verifier',
 };
 
 /**
@@ -28,7 +27,6 @@ export const ROLE_SIGNALS: Record<AgentRole, string> = {
   discusser: 'DISCUSS_COMPLETE',
   planner: 'PLAN_COMPLETE',
   executor: 'EXECUTE_COMPLETE',
-  verifier: 'VERIFY_COMPLETE',
 };
 
 /**

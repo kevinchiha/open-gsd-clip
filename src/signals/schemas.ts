@@ -55,6 +55,34 @@ const revisionNeededSchema = z
   .strip();
 
 /**
+ * Zod schema for UI_DESIGN_COMPLETE signal.
+ * Emitted when the designer finishes creating UI-SPEC.md for a phase.
+ */
+const uiDesignCompleteSchema = z
+  .object({
+    type: z.literal('UI_DESIGN_COMPLETE'),
+    phase: z.number(),
+    status: z.enum(['success', 'failure']),
+    artifacts: z.array(z.string()).optional(),
+    summary: z.string().optional(),
+  })
+  .strip();
+
+/**
+ * Zod schema for UI_REVIEW_COMPLETE signal.
+ * Emitted when the designer finishes a visual audit of implemented code.
+ */
+const uiReviewCompleteSchema = z
+  .object({
+    type: z.literal('UI_REVIEW_COMPLETE'),
+    phase: z.number(),
+    status: z.enum(['success', 'failure']),
+    artifacts: z.array(z.string()).optional(),
+    summary: z.string().optional(),
+  })
+  .strip();
+
+/**
  * Zod schema for PLAN_COMPLETE signal.
  * Emitted when planning finishes for a phase.
  */
@@ -78,32 +106,6 @@ const executeCompleteSchema = z
     phase: z.number(),
     status: z.enum(['success', 'failure']),
     artifacts: z.array(z.string()).optional(),
-    summary: z.string().optional(),
-  })
-  .strip();
-
-/**
- * Zod schema for VERIFY_COMPLETE signal.
- * Emitted when verification passes for a phase.
- */
-const verifyCompleteSchema = z
-  .object({
-    type: z.literal('VERIFY_COMPLETE'),
-    phase: z.number(),
-    artifacts: z.array(z.string()).optional(),
-    summary: z.string().optional(),
-  })
-  .strip();
-
-/**
- * Zod schema for VERIFY_FAILED signal.
- * Emitted when verification fails -- includes list of issues.
- */
-const verifyFailedSchema = z
-  .object({
-    type: z.literal('VERIFY_FAILED'),
-    phase: z.number(),
-    issues: z.array(z.string()),
     summary: z.string().optional(),
   })
   .strip();
@@ -173,10 +175,10 @@ export const signalSchemas: Record<SignalType, z.ZodTypeAny> = {
   DISCUSS_COMPLETE: discussCompleteSchema,
   APPROVED: approvedSchema,
   REVISION_NEEDED: revisionNeededSchema,
+  UI_DESIGN_COMPLETE: uiDesignCompleteSchema,
+  UI_REVIEW_COMPLETE: uiReviewCompleteSchema,
   PLAN_COMPLETE: planCompleteSchema,
   EXECUTE_COMPLETE: executeCompleteSchema,
-  VERIFY_COMPLETE: verifyCompleteSchema,
-  VERIFY_FAILED: verifyFailedSchema,
   DECISION_NEEDED: decisionNeededSchema,
   DECISION_MADE: decisionMadeSchema,
   AGENT_ERROR: agentErrorSchema,
@@ -192,10 +194,10 @@ export const gsdSignalSchema = z.discriminatedUnion('type', [
   discussCompleteSchema,
   approvedSchema,
   revisionNeededSchema,
+  uiDesignCompleteSchema,
+  uiReviewCompleteSchema,
   planCompleteSchema,
   executeCompleteSchema,
-  verifyCompleteSchema,
-  verifyFailedSchema,
   decisionNeededSchema,
   decisionMadeSchema,
   agentErrorSchema,

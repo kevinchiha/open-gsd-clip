@@ -7,8 +7,7 @@ export type AgentRole =
   | 'discusser'
   | 'designer'
   | 'planner'
-  | 'executor'
-  | 'verifier';
+  | 'executor';
 
 /**
  * All GSD roles as an array for iteration.
@@ -19,7 +18,6 @@ export const AGENT_ROLES: AgentRole[] = [
   'designer',
   'planner',
   'executor',
-  'verifier',
 ];
 
 /**
@@ -31,7 +29,6 @@ export const PAPERCLIP_ROLE_MAP: Record<AgentRole, string> = {
   designer: 'designer',
   planner: 'pm',
   executor: 'engineer',
-  verifier: 'qa',
 };
 
 /**

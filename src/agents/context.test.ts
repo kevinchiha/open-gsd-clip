@@ -39,12 +39,11 @@ describe('AgentContext type', () => {
 });
 
 describe('ROLE_LABELS constant', () => {
-  it('should have labels for all five roles', () => {
+  it('should have labels for all roles', () => {
     expect(ROLE_LABELS['ceo']).toBe('CEO');
     expect(ROLE_LABELS['discusser']).toBe('Discusser');
     expect(ROLE_LABELS['planner']).toBe('Planner');
     expect(ROLE_LABELS['executor']).toBe('Executor');
-    expect(ROLE_LABELS['verifier']).toBe('Verifier');
   });
 });
 
@@ -93,18 +92,8 @@ describe('buildIssueTitle', () => {
     expect(buildIssueTitle(ctx)).toBe('Executor: Run /gsd:execute-phase 2');
   });
 
-  it('should return correct title for verifier role with phase number', () => {
-    const ctx: AgentContext = {
-      role: 'verifier',
-      projectPath: '/path/to/project',
-      phaseNumber: 2,
-      gsdCommand: '/gsd:verify-work 2',
-    };
-    expect(buildIssueTitle(ctx)).toBe('Verifier: Run /gsd:verify-work 2');
-  });
-
   it('should interpolate phase number for non-CEO roles', () => {
-    const roles: AgentRole[] = ['discusser', 'planner', 'executor', 'verifier'];
+    const roles: AgentRole[] = ['discusser', 'planner', 'executor'];
     for (const role of roles) {
       const ctx: AgentContext = {
         role,
@@ -119,12 +108,11 @@ describe('buildIssueTitle', () => {
 });
 
 describe('ROLE_SIGNALS constant', () => {
-  it('should have signal types for all five roles', () => {
+  it('should have signal types for all roles', () => {
     expect(ROLE_SIGNALS['ceo']).toBe('PROJECT_READY');
     expect(ROLE_SIGNALS['discusser']).toBe('DISCUSS_COMPLETE');
     expect(ROLE_SIGNALS['planner']).toBe('PLAN_COMPLETE');
     expect(ROLE_SIGNALS['executor']).toBe('EXECUTE_COMPLETE');
-    expect(ROLE_SIGNALS['verifier']).toBe('VERIFY_COMPLETE');
   });
 });
 
@@ -254,20 +242,6 @@ describe('buildIssueDescription', () => {
     });
   });
 
-  describe('Verifier role', () => {
-    it('should include GSD_SIGNAL template with VERIFY_COMPLETE', () => {
-      const ctx: AgentContext = {
-        role: 'verifier',
-        projectPath: '/projects/my-app',
-        phaseNumber: 2,
-        gsdCommand: '/gsd:verify-work 2',
-      };
-      const desc = buildIssueDescription(ctx);
-      expect(desc).toContain('GSD_SIGNAL:VERIFY_COMPLETE');
-      expect(desc).toContain('phase: 2');
-    });
-  });
-
   describe('All roles', () => {
     it('should include exact GSD command to run', () => {
       const roles: AgentRole[] = [
@@ -275,7 +249,6 @@ describe('buildIssueDescription', () => {
         'discusser',
         'planner',
         'executor',
-        'verifier',
       ];
       for (const role of roles) {
         const ctx: AgentContext = {

@@ -9,11 +9,10 @@
  * to pre-parallel behavior.
  *
  * The full per-phase loop:
- *   discussing -> reviewing -> planning -> executing -> verifying -> done
+ *   discussing -> reviewing -> planning -> executing -> ui_reviewing -> done
  *
- * CEO quality gates sit between discussing and planning. Failed
- * verification can trigger re-execution. Phase-level retry resets
- * to pending. Re-planning is capped at maxReplans=2.
+ * CEO quality gates sit between discussing and planning. Phase-level
+ * retry resets to pending. Re-planning is capped at maxReplans=2.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -712,9 +711,6 @@ export class PipelineRunner {
       case 'ui_reviewing':
         await this.spawnUiReviewer(phaseNumber);
         break;
-      case 'verifying':
-        await this.spawnVerifier(phaseNumber);
-        break;
       case 'done':
         await this.onPhaseComplete(phaseNumber);
         break;
@@ -1072,27 +1068,6 @@ export class PipelineRunner {
     await this.setAgentOnPhase(phaseNumber, spawn.issueId, spawn.runId, agentId);
   }
 
-  private async spawnVerifier(phaseNumber: number): Promise<void> {
-    if (!this.state || !this.agents) return;
-
-    const agentId = this.agents.verifier.agentId;
-    const projectPath =
-      this.worktreeManager?.getWorkingDirectory(phaseNumber) ??
-      this.state.projectPath;
-    const spawn = await retryWithBackoff(
-      () =>
-        spawnAgent(this.services, this.companyId, agentId, {
-          role: 'verifier',
-          projectPath,
-          phaseNumber,
-          gsdCommand: `/gsd:verify-work ${phaseNumber}`,
-        }),
-      this.config.retry,
-    );
-
-    await this.setAgentOnPhase(phaseNumber, spawn.issueId, spawn.runId, agentId);
-  }
-
   private async spawnRevisionDiscusser(
     phaseNumber: number,
     feedback: string,
@@ -1374,7 +1349,6 @@ export class PipelineRunner {
       planning: 'planner',
       executing: 'executor',
       ui_reviewing: 'designer',
-      verifying: 'verifier',
     };
     return (map[status] as AgentRole) ?? null;
   }

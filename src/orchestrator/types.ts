@@ -117,6 +117,5 @@ export const DEFAULT_CONFIG: OrchestratorConfig = {
     reviewing: 10 * 60_000, // 10 minutes
     planning: 20 * 60_000, // 20 minutes
     executing: 45 * 60_000, // 45 minutes
-    verifying: 15 * 60_000, // 15 minutes
   },
 };

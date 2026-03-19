@@ -195,24 +195,6 @@ describe('mapSignalToPhaseEvent', () => {
     });
   });
 
-  it('maps VERIFY_COMPLETE to STEP_COMPLETED', () => {
-    const signal: GsdSignal = { type: 'VERIFY_COMPLETE', phase: 3 };
-    expect(mapSignalToPhaseEvent(signal)).toEqual({ type: 'STEP_COMPLETED' });
-  });
-
-  it('maps VERIFY_FAILED to STEP_FAILED with test_failure', () => {
-    const signal: GsdSignal = {
-      type: 'VERIFY_FAILED',
-      phase: 3,
-      issues: ['Test A failed', 'Lint error in file.ts'],
-    };
-    expect(mapSignalToPhaseEvent(signal)).toEqual({
-      type: 'STEP_FAILED',
-      errorType: 'test_failure',
-      message: 'Test A failed; Lint error in file.ts',
-    });
-  });
-
   it('maps AGENT_ERROR to STEP_FAILED with fatal', () => {
     const signal: GsdSignal = {
       type: 'AGENT_ERROR',

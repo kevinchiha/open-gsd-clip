@@ -1,5 +1,5 @@
 /**
- * All 12 GSD signal types used for inter-agent communication.
+ * All 10 GSD signal types used for inter-agent communication.
  * Each signal is sent as a YAML block in Paperclip issue comments.
  */
 export const SIGNAL_TYPES = [
@@ -7,10 +7,10 @@ export const SIGNAL_TYPES = [
   'DISCUSS_COMPLETE',
   'APPROVED',
   'REVISION_NEEDED',
+  'UI_DESIGN_COMPLETE',
+  'UI_REVIEW_COMPLETE',
   'PLAN_COMPLETE',
   'EXECUTE_COMPLETE',
-  'VERIFY_COMPLETE',
-  'VERIFY_FAILED',
   'DECISION_NEEDED',
   'DECISION_MADE',
   'AGENT_ERROR',
@@ -71,15 +71,17 @@ export interface ExecuteCompleteSignal extends BaseSignal {
   summary?: string;
 }
 
-export interface VerifyCompleteSignal extends BaseSignal {
-  type: 'VERIFY_COMPLETE';
+export interface UiDesignCompleteSignal extends BaseSignal {
+  type: 'UI_DESIGN_COMPLETE';
+  status: 'success' | 'failure';
   artifacts?: string[];
   summary?: string;
 }
 
-export interface VerifyFailedSignal extends BaseSignal {
-  type: 'VERIFY_FAILED';
-  issues: string[];
+export interface UiReviewCompleteSignal extends BaseSignal {
+  type: 'UI_REVIEW_COMPLETE';
+  status: 'success' | 'failure';
+  artifacts?: string[];
   summary?: string;
 }
 
@@ -120,10 +122,10 @@ export type GsdSignal =
   | DiscussCompleteSignal
   | ApprovedSignal
   | RevisionNeededSignal
+  | UiDesignCompleteSignal
+  | UiReviewCompleteSignal
   | PlanCompleteSignal
   | ExecuteCompleteSignal
-  | VerifyCompleteSignal
-  | VerifyFailedSignal
   | DecisionNeededSignal
   | DecisionMadeSignal
   | AgentErrorSignal

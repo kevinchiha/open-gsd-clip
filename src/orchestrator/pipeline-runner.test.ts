@@ -125,6 +125,11 @@ function createMockAgents(): Record<AgentRole, AgentDefinition> {
       role: 'discusser',
       name: 'GSD Discusser',
     },
+    designer: {
+      agentId: 'designer-agent-id',
+      role: 'designer',
+      name: 'GSD Designer',
+    },
     planner: {
       agentId: 'planner-agent-id',
       role: 'planner',
@@ -134,11 +139,6 @@ function createMockAgents(): Record<AgentRole, AgentDefinition> {
       agentId: 'executor-agent-id',
       role: 'executor',
       name: 'GSD Executor',
-    },
-    verifier: {
-      agentId: 'verifier-agent-id',
-      role: 'verifier',
-      name: 'GSD Verifier',
     },
   };
 }
@@ -378,9 +378,10 @@ describe('PipelineRunner', () => {
         },
         {
           signal: {
-            type: 'VERIFY_COMPLETE',
+            type: 'UI_REVIEW_COMPLETE',
             phase: firstPhase.phaseNumber,
-            summary: 'verified',
+            status: 'success',
+            summary: 'reviewed',
           },
           event: { type: 'STEP_COMPLETED' },
         },
@@ -648,119 +649,6 @@ describe('PipelineRunner', () => {
     });
   });
 
-  // ── 7. Replan on verification failure ────────────────────────────
-
-  describe('replan on verification failure', () => {
-    it('transitions back to executing when verification fails (test_failure)', async () => {
-      await runner.start('/test/project', 'Build a todo app');
-
-      // PROJECT_READY
-      parseSignal.mockReturnValue({
-        type: 'PROJECT_READY',
-        phase: 0,
-        summary: 'done',
-      } as GsdSignal);
-      (
-        services.issues.listComments as ReturnType<typeof vi.fn>
-      ).mockResolvedValue({
-        ok: true,
-        value: [{ id: 'c1', body: 'signal' }],
-      });
-
-      await runner.handleAgentCompletion({
-        status: 'succeeded',
-        agentId: 'ceo-agent-id',
-        runId: 'run-1',
-        issueId: 'issue-1',
-      });
-
-      const firstPhaseNumber = runner.getState()?.phases[0]
-        ?.phaseNumber as number;
-
-      // Advance through discussing -> reviewing -> planning -> executing -> verifying
-      const stepsToVerifying: Array<{ signal: GsdSignal; event: PhaseEvent }> =
-        [
-          {
-            signal: {
-              type: 'DISCUSS_COMPLETE',
-              phase: firstPhaseNumber,
-              status: 'success',
-              summary: 'done',
-            },
-            event: { type: 'STEP_COMPLETED' },
-          },
-          {
-            signal: {
-              type: 'APPROVED',
-              phase: firstPhaseNumber,
-              summary: 'approved',
-            },
-            event: { type: 'APPROVED' },
-          },
-          {
-            signal: {
-              type: 'PLAN_COMPLETE',
-              phase: firstPhaseNumber,
-              status: 'success',
-              summary: 'planned',
-            },
-            event: { type: 'STEP_COMPLETED' },
-          },
-          {
-            signal: {
-              type: 'EXECUTE_COMPLETE',
-              phase: firstPhaseNumber,
-              status: 'success',
-              summary: 'done',
-            },
-            event: { type: 'STEP_COMPLETED' },
-          },
-        ];
-
-      for (const { signal, event } of stepsToVerifying) {
-        spawnAgent.mockResolvedValue({
-          issueId: `issue-${signal.type}`,
-          runId: `run-${signal.type}`,
-        });
-        parseSignal.mockReturnValue(signal);
-        mapSignalToPhaseEvent.mockReturnValue(event);
-
-        await runner.handleAgentCompletion({
-          status: 'succeeded',
-          agentId: 'some-agent',
-          runId: `run-${signal.type}`,
-          issueId: `issue-${signal.type}`,
-        });
-      }
-
-      // Now at verifying, send VERIFY_FAILED -> should go back to executing per phase-machine
-      spawnAgent.mockResolvedValue({ issueId: 'issue-vf', runId: 'run-vf' });
-      parseSignal.mockReturnValue({
-        type: 'VERIFY_FAILED',
-        phase: firstPhaseNumber,
-        issues: ['Tests failed: 3 assertions'],
-      } as GsdSignal);
-      mapSignalToPhaseEvent.mockReturnValue({
-        type: 'STEP_FAILED',
-        errorType: 'test_failure',
-        message: 'Tests failed: 3 assertions',
-      } as PhaseEvent);
-
-      await runner.handleAgentCompletion({
-        status: 'succeeded',
-        agentId: 'verifier-agent-id',
-        runId: 'run-vf',
-        issueId: 'issue-vf',
-      });
-
-      const state = runner.getState()!;
-      const phase = state.phases.find(
-        (p) => p.phaseNumber === firstPhaseNumber,
-      )!;
-      // verifying + STEP_FAILED -> executing (per phase-machine transition table)
-      expect(phase.status).toBe('executing');
-    });
-  });
 
   // ── 8. All phases done ──────────────────────────────────────────
 
@@ -830,9 +718,10 @@ describe('PipelineRunner', () => {
           },
           {
             signal: {
-              type: 'VERIFY_COMPLETE',
+              type: 'UI_REVIEW_COMPLETE',
               phase: phase.phaseNumber,
-              summary: 'verified',
+              status: 'success',
+              summary: 'reviewed',
             },
             event: { type: 'STEP_COMPLETED' },
           },
@@ -1018,7 +907,7 @@ describe('PipelineRunner', () => {
           event: { type: 'STEP_COMPLETED' },
         },
         {
-          signal: { type: 'VERIFY_COMPLETE', phase: 1, summary: 'verified' },
+          signal: { type: 'UI_REVIEW_COMPLETE', phase: 1, status: 'success', summary: 'reviewed' },
           event: { type: 'STEP_COMPLETED' },
         },
       ];
@@ -1142,7 +1031,7 @@ describe('PipelineRunner', () => {
         { signal: { type: 'APPROVED', phase: 1, summary: 'approved' }, event: { type: 'APPROVED' } },
         { signal: { type: 'PLAN_COMPLETE', phase: 1, status: 'success', summary: 'planned' }, event: { type: 'STEP_COMPLETED' } },
         { signal: { type: 'EXECUTE_COMPLETE', phase: 1, status: 'success', summary: 'done' }, event: { type: 'STEP_COMPLETED' } },
-        { signal: { type: 'VERIFY_COMPLETE', phase: 1, summary: 'verified' }, event: { type: 'STEP_COMPLETED' } },
+        { signal: { type: 'UI_REVIEW_COMPLETE', phase: 1, status: 'success', summary: 'reviewed' }, event: { type: 'STEP_COMPLETED' } },
       ];
 
       for (const { signal, event } of phaseSignals) {
@@ -1634,7 +1523,7 @@ describe('PipelineRunner', () => {
           event: { type: 'STEP_COMPLETED' },
         },
         {
-          signal: { type: 'VERIFY_COMPLETE', phase: firstPhaseNumber, summary: 'verified' },
+          signal: { type: 'UI_REVIEW_COMPLETE', phase: firstPhaseNumber, status: 'success', summary: 'reviewed' },
           event: { type: 'STEP_COMPLETED' },
         },
       ];

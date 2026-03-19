@@ -148,7 +148,7 @@ describe('pipelineTransition - valid transitions', () => {
       ...createInitialPipelineState('/p', 'b'),
       status: 'running',
       startedAt: '2026-01-01T00:00:00.000Z',
-      phases: [makePhaseState(1, { status: 'verifying' }), makePhaseState(2)],
+      phases: [makePhaseState(1, { status: 'ui_reviewing' }), makePhaseState(2)],
     };
     const result = pipelineTransition(state, {
       type: 'PHASE_COMPLETED',

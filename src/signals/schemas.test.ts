@@ -3,7 +3,7 @@ import { SIGNAL_TYPES } from './types.js';
 import { gsdSignalSchema, signalSchemas } from './schemas.js';
 
 describe('Signal schemas', () => {
-  it('has schemas for all 12 signal types', () => {
+  it('has schemas for all 10 signal types', () => {
     for (const type of SIGNAL_TYPES) {
       expect(signalSchemas[type]).toBeDefined();
     }
@@ -150,53 +150,6 @@ describe('Signal schemas', () => {
     it('rejects missing required field (status)', () => {
       const result = signalSchemas.EXECUTE_COMPLETE.safeParse({
         type: 'EXECUTE_COMPLETE',
-        phase: 1,
-      });
-      expect(result.success).toBe(false);
-    });
-  });
-
-  describe('VERIFY_COMPLETE', () => {
-    it('validates valid data', () => {
-      const result = signalSchemas.VERIFY_COMPLETE.safeParse({
-        type: 'VERIFY_COMPLETE',
-        phase: 3,
-        artifacts: ['report.md'],
-        summary: 'All tests pass',
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it('accepts minimal valid data', () => {
-      const result = signalSchemas.VERIFY_COMPLETE.safeParse({
-        type: 'VERIFY_COMPLETE',
-        phase: 3,
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it('rejects missing phase', () => {
-      const result = signalSchemas.VERIFY_COMPLETE.safeParse({
-        type: 'VERIFY_COMPLETE',
-      });
-      expect(result.success).toBe(false);
-    });
-  });
-
-  describe('VERIFY_FAILED', () => {
-    it('validates valid data', () => {
-      const result = signalSchemas.VERIFY_FAILED.safeParse({
-        type: 'VERIFY_FAILED',
-        phase: 1,
-        issues: ['Test suite failed', 'Linting errors'],
-        summary: 'Verification failed',
-      });
-      expect(result.success).toBe(true);
-    });
-
-    it('rejects missing required field (issues)', () => {
-      const result = signalSchemas.VERIFY_FAILED.safeParse({
-        type: 'VERIFY_FAILED',
         phase: 1,
       });
       expect(result.success).toBe(false);
@@ -362,8 +315,6 @@ describe('gsdSignalSchema (discriminated union)', () => {
       { type: 'REVISION_NEEDED', phase: 1, feedback: 'Fix it' },
       { type: 'PLAN_COMPLETE', phase: 1, status: 'failure' },
       { type: 'EXECUTE_COMPLETE', phase: 1, status: 'success' },
-      { type: 'VERIFY_COMPLETE', phase: 1 },
-      { type: 'VERIFY_FAILED', phase: 1, issues: ['broken'] },
       { type: 'DECISION_NEEDED', phase: 1, context: 'ctx', options: ['a'] },
       { type: 'DECISION_MADE', phase: 1, decision: 'd', reasoning: 'r' },
       { type: 'AGENT_ERROR', phase: 1, error: 'err' },
@@ -386,9 +337,9 @@ describe('gsdSignalSchema (discriminated union)', () => {
 
   it('rejects signal with missing type-specific required field', () => {
     const result = gsdSignalSchema.safeParse({
-      type: 'VERIFY_FAILED',
+      type: 'DISCUSS_COMPLETE',
       phase: 1,
-      // missing 'issues' field
+      // missing 'status' field
     });
     expect(result.success).toBe(false);
   });

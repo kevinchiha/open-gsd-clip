@@ -21,19 +21,17 @@ describe('AgentRole type', () => {
       'discusser',
       'planner',
       'executor',
-      'verifier',
     ];
-    expect(roles).toHaveLength(5);
+    expect(roles).toHaveLength(4);
   });
 });
 
 describe('AGENT_ROLES constant', () => {
-  it('should contain all five GSD roles', () => {
+  it('should contain all GSD roles', () => {
     expect(AGENT_ROLES).toContain('ceo');
     expect(AGENT_ROLES).toContain('discusser');
     expect(AGENT_ROLES).toContain('planner');
     expect(AGENT_ROLES).toContain('executor');
-    expect(AGENT_ROLES).toContain('verifier');
     expect(AGENT_ROLES).toHaveLength(5);
   });
 });
@@ -55,9 +53,6 @@ describe('PAPERCLIP_ROLE_MAP', () => {
     expect(PAPERCLIP_ROLE_MAP['executor']).toBe('engineer');
   });
 
-  it('should map verifier to qa', () => {
-    expect(PAPERCLIP_ROLE_MAP['verifier']).toBe('qa');
-  });
 });
 
 describe('AgentDefinition type', () => {

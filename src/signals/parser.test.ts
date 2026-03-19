@@ -66,10 +66,10 @@ phase: 1
 
   it('returns null for valid type but missing required fields', () => {
     const text = `---
-GSD_SIGNAL:VERIFY_FAILED
+GSD_SIGNAL:DISCUSS_COMPLETE
 phase: 1
 ---`;
-    // VERIFY_FAILED requires 'issues' field
+    // DISCUSS_COMPLETE requires 'status' field
     expect(parseSignal(text)).toBeNull();
   });
 
@@ -115,21 +115,19 @@ summary: Could not reach consensus
     }
   });
 
-  it('parses VERIFY_FAILED signal', () => {
+  it('parses UI_REVIEW_COMPLETE signal', () => {
     const text = `---
-GSD_SIGNAL:VERIFY_FAILED
+GSD_SIGNAL:UI_REVIEW_COMPLETE
 phase: 2
-issues:
-  - Tests failing
-  - Type errors found
-summary: Verification did not pass
+status: success
+summary: Visual audit passed
 ---`;
 
     const result = parseSignal(text);
     expect(result).not.toBeNull();
-    expect(result?.type).toBe('VERIFY_FAILED');
-    if (result?.type === 'VERIFY_FAILED') {
-      expect(result.issues).toEqual(['Tests failing', 'Type errors found']);
+    expect(result?.type).toBe('UI_REVIEW_COMPLETE');
+    if (result?.type === 'UI_REVIEW_COMPLETE') {
+      expect(result.status).toBe('success');
     }
   });
 

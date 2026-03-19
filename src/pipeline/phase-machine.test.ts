@@ -69,7 +69,7 @@ describe('phaseTransition - valid forward transitions', () => {
     expect(result.state.stepTimings.reviewing?.completedAt).toBeNull();
   });
 
-  it('reviewing + APPROVED -> planning (sets reviewing.completedAt, planning.startedAt)', () => {
+  it('reviewing + APPROVED -> ui_designing (sets reviewing.completedAt, ui_designing.startedAt)', () => {
     const state: PhaseState = {
       ...createInitialPhaseState(1),
       status: 'reviewing',
@@ -83,11 +83,11 @@ describe('phaseTransition - valid forward transitions', () => {
     };
     const result = phaseTransition(state, { type: 'APPROVED' });
     expect(result.valid).toBe(true);
-    expect(result.state.status).toBe('planning');
+    expect(result.state.status).toBe('ui_designing');
     expect(result.state.stepTimings.reviewing?.completedAt).toBeTypeOf(
       'string',
     );
-    expect(result.state.stepTimings.planning?.startedAt).toBeTypeOf('string');
+    expect(result.state.stepTimings.ui_designing?.startedAt).toBeTypeOf('string');
   });
 
   it('planning + STEP_COMPLETED -> executing', () => {
@@ -105,7 +105,7 @@ describe('phaseTransition - valid forward transitions', () => {
     expect(result.state.stepTimings.executing?.startedAt).toBeTypeOf('string');
   });
 
-  it('executing + STEP_COMPLETED -> verifying', () => {
+  it('executing + STEP_COMPLETED -> ui_reviewing', () => {
     const state: PhaseState = {
       ...createInitialPhaseState(1),
       status: 'executing',
@@ -115,25 +115,25 @@ describe('phaseTransition - valid forward transitions', () => {
     };
     const result = phaseTransition(state, { type: 'STEP_COMPLETED' });
     expect(result.valid).toBe(true);
-    expect(result.state.status).toBe('verifying');
+    expect(result.state.status).toBe('ui_reviewing');
     expect(result.state.stepTimings.executing?.completedAt).toBeTypeOf(
       'string',
     );
-    expect(result.state.stepTimings.verifying?.startedAt).toBeTypeOf('string');
+    expect(result.state.stepTimings.ui_reviewing?.startedAt).toBeTypeOf('string');
   });
 
-  it('verifying + STEP_COMPLETED -> done', () => {
+  it('ui_reviewing + STEP_COMPLETED -> done', () => {
     const state: PhaseState = {
       ...createInitialPhaseState(1),
-      status: 'verifying',
+      status: 'ui_reviewing',
       stepTimings: {
-        verifying: { startedAt: '2026-01-01T00:00:00.000Z', completedAt: null },
+        ui_reviewing: { startedAt: '2026-01-01T00:00:00.000Z', completedAt: null },
       },
     };
     const result = phaseTransition(state, { type: 'STEP_COMPLETED' });
     expect(result.valid).toBe(true);
     expect(result.state.status).toBe('done');
-    expect(result.state.stepTimings.verifying?.completedAt).toBeTypeOf(
+    expect(result.state.stepTimings.ui_reviewing?.completedAt).toBeTypeOf(
       'string',
     );
   });
@@ -169,36 +169,6 @@ describe('phaseTransition - backward transitions', () => {
     );
   });
 
-  it('verifying + STEP_FAILED -> executing (retry loop: resets executing timing)', () => {
-    const state: PhaseState = {
-      ...createInitialPhaseState(1),
-      status: 'verifying',
-      stepTimings: {
-        executing: {
-          startedAt: '2026-01-01T00:00:00.000Z',
-          completedAt: '2026-01-01T00:10:00.000Z',
-        },
-        verifying: { startedAt: '2026-01-01T00:10:00.000Z', completedAt: null },
-      },
-    };
-    const result = phaseTransition(state, {
-      type: 'STEP_FAILED',
-      errorType: 'test_failure',
-      message: 'Tests did not pass',
-    });
-    expect(result.valid).toBe(true);
-    expect(result.state.status).toBe('executing');
-    // executing timing is reset
-    expect(result.state.stepTimings.executing?.startedAt).toBeTypeOf('string');
-    expect(result.state.stepTimings.executing?.startedAt).not.toBe(
-      '2026-01-01T00:00:00.000Z',
-    );
-    expect(result.state.stepTimings.executing?.completedAt).toBeNull();
-    // verifying timing remains as historical (completedAt set on leaving)
-    expect(result.state.stepTimings.verifying?.completedAt).toBeTypeOf(
-      'string',
-    );
-  });
 });
 
 // ── failed -> pending (RETRY_PHASE) ─────────────────────────────────
@@ -343,7 +313,7 @@ describe('phaseTransition - agent tracking', () => {
       'reviewing',
       'planning',
       'executing',
-      'verifying',
+      'ui_reviewing',
     ];
     for (const status of statuses) {
       const state: PhaseState = { ...createInitialPhaseState(1), status };
@@ -418,21 +388,4 @@ describe('phaseTransition - STEP_FAILED sets error', () => {
     });
   }
 
-  it('verifying + STEP_FAILED -> executing (retry, not terminal failure)', () => {
-    const state: PhaseState = {
-      ...createInitialPhaseState(1),
-      status: 'verifying',
-      stepTimings: {
-        verifying: { startedAt: '2026-01-01T00:00:00.000Z', completedAt: null },
-      },
-    };
-    const result = phaseTransition(state, {
-      type: 'STEP_FAILED',
-      errorType: 'test_failure',
-      message: 'Tests failed',
-    });
-    expect(result.valid).toBe(true);
-    // verifying -> executing is a retry loop, NOT a terminal failure
-    expect(result.state.status).toBe('executing');
-  });
 });

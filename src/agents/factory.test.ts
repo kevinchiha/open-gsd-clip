@@ -132,9 +132,9 @@ describe('ensureAgentsExist', () => {
     expect(Object.keys(agents)).toHaveLength(5);
     expect(agents).toHaveProperty('ceo');
     expect(agents).toHaveProperty('discusser');
+    expect(agents).toHaveProperty('designer');
     expect(agents).toHaveProperty('planner');
     expect(agents).toHaveProperty('executor');
-    expect(agents).toHaveProperty('verifier');
   });
 
   it('should be idempotent - return existing agents', async () => {
@@ -152,6 +152,12 @@ describe('ensureAgentsExist', () => {
         companyId: 'company-123',
       },
       {
+        agentId: 'gsd-designer',
+        role: 'designer',
+        name: 'GSD Designer',
+        companyId: 'company-123',
+      },
+      {
         agentId: 'gsd-planner',
         role: 'planner',
         name: 'GSD Planner',
@@ -161,12 +167,6 @@ describe('ensureAgentsExist', () => {
         agentId: 'gsd-executor',
         role: 'executor',
         name: 'GSD Executor',
-        companyId: 'company-123',
-      },
-      {
-        agentId: 'gsd-verifier',
-        role: 'verifier',
-        name: 'GSD Verifier',
         companyId: 'company-123',
       },
     ];
@@ -239,7 +239,7 @@ describe('ensureAgentsExist', () => {
       'company-123',
     );
 
-    // Should create 4 agents (discusser, planner, executor, verifier)
+    // Should create 4 agents (discusser, designer, planner, executor)
     expect(mockCreate).toHaveBeenCalledTimes(4);
     expect(agents['ceo'].agentId).toBe('gsd-ceo'); // existing
   });
@@ -278,9 +278,9 @@ describe('ensureAgentsExist', () => {
     const names = createdAgents.map((a) => a.name);
     expect(names).toContain('GSD CEO');
     expect(names).toContain('GSD Discusser');
+    expect(names).toContain('GSD Designer');
     expect(names).toContain('GSD Planner');
     expect(names).toContain('GSD Executor');
-    expect(names).toContain('GSD Verifier');
   });
 
   it('should set correct adapterConfig with cwd and instructionsFilePath', async () => {

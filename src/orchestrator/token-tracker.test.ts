@@ -116,7 +116,7 @@ describe('TokenTracker', () => {
       totalTokens: 150,
       costCents: 0.3,
     });
-    tracker.recordUsage(2, 'verifier', {
+    tracker.recordUsage(2, 'executor', {
       inputTokens: 80,
       outputTokens: 40,
       totalTokens: 120,
