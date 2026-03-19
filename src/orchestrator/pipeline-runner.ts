@@ -692,19 +692,25 @@ export class PipelineRunner {
     switch (phase.status) {
       case 'discussing':
         // Skip interactive discussion in autonomous mode — advance directly
-        log.info({ phaseNumber }, 'Autonomous mode: skipping discuss, advancing to planning');
+        log.info({ phaseNumber }, 'Autonomous mode: skipping discuss, advancing to ui_designing');
         await this.handlePhaseEvent(phaseNumber, { type: 'STEP_COMPLETED' });
         break;
       case 'reviewing':
-        // Skip CEO review in autonomous mode — advance directly
-        log.info({ phaseNumber }, 'Autonomous mode: skipping review, advancing to planning');
+        // Skip CEO review in autonomous mode — advance to ui_designing
+        log.info({ phaseNumber }, 'Autonomous mode: skipping review, advancing to ui_designing');
         await this.handlePhaseEvent(phaseNumber, { type: 'APPROVED' });
+        break;
+      case 'ui_designing':
+        await this.spawnUiDesigner(phaseNumber);
         break;
       case 'planning':
         await this.spawnPlanner(phaseNumber);
         break;
       case 'executing':
         await this.spawnExecutor(phaseNumber);
+        break;
+      case 'ui_reviewing':
+        await this.spawnUiReviewer(phaseNumber);
         break;
       case 'verifying':
         await this.spawnVerifier(phaseNumber);
@@ -980,7 +986,49 @@ export class PipelineRunner {
   // ── Private: Agent spawning ─────────────────────────────────────
 
   // spawnDiscusser and spawnCeoReview removed — autonomous mode skips
-  // interactive discussion and CEO review steps, advancing directly to planning.
+  // interactive discussion and CEO review steps.
+
+  private async spawnUiDesigner(phaseNumber: number): Promise<void> {
+    if (!this.state || !this.agents) return;
+
+    const agentId = this.agents.designer.agentId;
+    const projectPath =
+      this.worktreeManager?.getWorkingDirectory(phaseNumber) ??
+      this.state.projectPath;
+    const spawn = await retryWithBackoff(
+      () =>
+        spawnAgent(this.services, this.companyId, agentId, {
+          role: 'designer',
+          projectPath,
+          phaseNumber,
+          gsdCommand: `/gsd:ui-phase ${phaseNumber}`,
+        }),
+      this.config.retry,
+    );
+
+    await this.setAgentOnPhase(phaseNumber, spawn.issueId, spawn.runId, agentId);
+  }
+
+  private async spawnUiReviewer(phaseNumber: number): Promise<void> {
+    if (!this.state || !this.agents) return;
+
+    const agentId = this.agents.designer.agentId;
+    const projectPath =
+      this.worktreeManager?.getWorkingDirectory(phaseNumber) ??
+      this.state.projectPath;
+    const spawn = await retryWithBackoff(
+      () =>
+        spawnAgent(this.services, this.companyId, agentId, {
+          role: 'designer',
+          projectPath,
+          phaseNumber,
+          gsdCommand: `/gsd:ui-review ${phaseNumber}`,
+        }),
+      this.config.retry,
+    );
+
+    await this.setAgentOnPhase(phaseNumber, spawn.issueId, spawn.runId, agentId);
+  }
 
   private async spawnPlanner(phaseNumber: number): Promise<void> {
     if (!this.state || !this.agents) return;

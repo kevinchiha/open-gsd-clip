@@ -5,6 +5,7 @@
 export type AgentRole =
   | 'ceo'
   | 'discusser'
+  | 'designer'
   | 'planner'
   | 'executor'
   | 'verifier';
@@ -15,6 +16,7 @@ export type AgentRole =
 export const AGENT_ROLES: AgentRole[] = [
   'ceo',
   'discusser',
+  'designer',
   'planner',
   'executor',
   'verifier',
@@ -26,6 +28,7 @@ export const AGENT_ROLES: AgentRole[] = [
 export const PAPERCLIP_ROLE_MAP: Record<AgentRole, string> = {
   ceo: 'ceo',
   discusser: 'engineer',
+  designer: 'designer',
   planner: 'pm',
   executor: 'engineer',
   verifier: 'qa',

@@ -66,8 +66,10 @@ export type PhaseStatus =
   | 'pending'
   | 'discussing'
   | 'reviewing'
+  | 'ui_designing'
   | 'planning'
   | 'executing'
+  | 'ui_reviewing'
   | 'verifying'
   | 'done'
   | 'failed';
