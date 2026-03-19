@@ -123,6 +123,13 @@ export function startPlugin(config?: {
     }).catch(() => {});
   }
 
+  // Restore persisted state from previous run (crash recovery)
+  runner.restoreState().then((restored) => {
+    if (restored) {
+      log.info('Pipeline state restored from previous session');
+    }
+  }).catch(() => {});
+
   const stubServices = httpServices; // alias for notification wiring below
   // (keeping variable name for minimal diff)
 

@@ -1288,6 +1288,94 @@ export class PipelineRunner {
     if (!this.state) return;
 
     const serialized = serialize(this.state);
-    log.debug({ stateSize: serialized.length }, 'State persisted');
+
+    // Write to file for crash recovery
+    try {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+      const os = await import('node:os');
+      const dir = path.join(os.homedir(), '.open-gsd-clip');
+      fs.mkdirSync(dir, { recursive: true });
+      const stateFile = path.join(dir, 'pipeline-state.json');
+      const data = {
+        state: this.state,
+        agents: this.agents ? Object.fromEntries(
+          Object.entries(this.agents).map(([k, v]) => [k, { agentId: v.agentId, name: v.name }])
+        ) : null,
+        trackedRuns: Array.from(this.trackedRuns.entries()),
+        companyId: this.companyId,
+        savedAt: new Date().toISOString(),
+      };
+      fs.writeFileSync(stateFile, JSON.stringify(data, null, 2));
+      log.debug({ stateFile, stateSize: serialized.length }, 'State persisted to file');
+    } catch (err) {
+      log.warn({ error: (err as Error).message }, 'Failed to persist state to file');
+    }
+  }
+
+  /**
+   * Restore pipeline state from file after worker restart.
+   * Called on startup to resume a previously running pipeline.
+   */
+  async restoreState(): Promise<boolean> {
+    try {
+      const fs = await import('node:fs');
+      const path = await import('node:path');
+      const os = await import('node:os');
+      const stateFile = path.join(os.homedir(), '.open-gsd-clip', 'pipeline-state.json');
+
+      if (!fs.existsSync(stateFile)) return false;
+
+      const raw = JSON.parse(fs.readFileSync(stateFile, 'utf-8'));
+      if (!raw.state || !raw.agents) return false;
+
+      // Restore state
+      this.state = raw.state;
+      this.companyId = raw.companyId || this.companyId;
+
+      // Restore agent definitions
+      this.agents = raw.agents as Record<AgentRole, AgentDefinition>;
+
+      // Restore tracked runs and restart poller
+      if (raw.trackedRuns?.length > 0) {
+        for (const [issueId, info] of raw.trackedRuns) {
+          this.trackRunForPolling(info.agentId, issueId, info.runId);
+        }
+      }
+
+      // Re-poll any phases that have active agents
+      if (this.state?.phases) {
+        for (const phase of this.state.phases) {
+          if (phase.activeAgentIssueId && phase.status !== 'done' && phase.status !== 'failed' && phase.status !== 'pending') {
+            // Find the agent for this phase's current step
+            const agentRole = this.getAgentRoleForStatus(phase.status);
+            if (agentRole && this.agents[agentRole]) {
+              this.trackRunForPolling(
+                this.agents[agentRole].agentId,
+                phase.activeAgentIssueId,
+                'restored',
+              );
+            }
+          }
+        }
+      }
+
+      log.info({ status: this.state?.status, phases: this.state?.phases?.length }, 'Pipeline state restored from file');
+      return true;
+    } catch (err) {
+      log.warn({ error: (err as Error).message }, 'Failed to restore state');
+      return false;
+    }
+  }
+
+  private getAgentRoleForStatus(status: string): AgentRole | null {
+    const map: Record<string, AgentRole> = {
+      ui_designing: 'designer',
+      planning: 'planner',
+      executing: 'executor',
+      ui_reviewing: 'designer',
+      verifying: 'verifier',
+    };
+    return (map[status] as AgentRole) ?? null;
   }
 }
